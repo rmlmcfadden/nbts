@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-sim_heat_treatments.py – Niobium heat-treatment simulation driver  
+sim_heat_treatments.py – Niobium heat-treatment simulation driver
 (revision with **batch-seed support**)
 
 The script sweeps bake temperature and hold time for a chosen temperature-
@@ -17,7 +17,7 @@ $ sim [-c CFG] [-p PROFILE]             $ sim batch SEEDS.yml
       [-r [N]] [CFG]                          [-c CFG] [-p PROFILE] [-r [N]]
                                            [CFG]
 
-``-r N``  → add *N* extra re-oxidisation passes per (T, t) point  
+``-r N``  → add *N* extra re-oxidisation passes per (T, t) point
 plain ``-r`` (no number) ⇒ ``N = 1``
 
 ──────────────────────────────────────────────────────────────────────────────
@@ -90,6 +90,7 @@ from scripts.simulation_analyzer import CurrentDensityAnalyzer
 # ─── Internal helpers ───────────────────────────────────────────────────────
 ###############################################################################
 
+
 def _git_hash(short: bool = True) -> str:
     """Return the current commit hash (short or full)."""
     rev = "HEAD"
@@ -98,23 +99,27 @@ def _git_hash(short: bool = True) -> str:
 
     # 1) try current working directory
     try:
-        return subprocess.check_output(cmd, text=True,
-                                       stderr=subprocess.DEVNULL).strip()
+        return subprocess.check_output(
+            cmd, text=True, stderr=subprocess.DEVNULL
+        ).strip()
     except (subprocess.CalledProcessError, FileNotFoundError):
         pass
 
     # 2) try the directory containing this file
     try:
         return subprocess.check_output(
-            cmd, cwd=Path(__file__).resolve().parent,
-            text=True, stderr=subprocess.DEVNULL
+            cmd,
+            cwd=Path(__file__).resolve().parent,
+            text=True,
+            stderr=subprocess.DEVNULL,
         ).strip()
     except (subprocess.CalledProcessError, FileNotFoundError):
-        return ""          # couldn’t find a repo
+        return ""  # couldn’t find a repo
 
 
-
-def _save_run_metadata(cfg_path: Path, cli_ns: argparse.Namespace, run_dir: Path, cfg_obj) -> None:
+def _save_run_metadata(
+    cfg_path: Path, cli_ns: argparse.Namespace, run_dir: Path, cfg_obj
+) -> None:
     """Archive YAML config, CLI flags, git commit, and effective YAML (if changed)."""
     run_dir.mkdir(parents=True, exist_ok=True)
 
@@ -124,7 +129,7 @@ def _save_run_metadata(cfg_path: Path, cli_ns: argparse.Namespace, run_dir: Path
         "timestamp": datetime.now().astimezone().isoformat(),
         "git_commit": _git_hash(),
         "cli_flags": {
-            k: (str(v) if isinstance(v, Path) else v)          
+            k: (str(v) if isinstance(v, Path) else v)
             for k, v in vars(cli_ns).items()
             if k not in {"pos_config", "config"}
         },
@@ -139,6 +144,7 @@ def _save_run_metadata(cfg_path: Path, cli_ns: argparse.Namespace, run_dir: Path
     if merged_yaml != Path(cfg_path).read_text():
         (run_dir / "effective_config.yml").write_text(merged_yaml)
 
+
 ###############################################################################
 # ─── Seed helpers for batch mode ────────────────────────────────────────────
 ###############################################################################
@@ -148,6 +154,7 @@ _ProfileMap: dict[str, Any] = {
     "time_dep": TimeDepProfile,
     "two_step": TwoStepProfile,
 }
+
 
 def _load_seed_yaml(seed_yaml: Path) -> list[dict[str, Any]]:
     raw = yaml.safe_load(seed_yaml.read_text())
@@ -179,17 +186,28 @@ def _simulate_one_seed(cfg, seed_rec: dict[str, Any], save_dir: Path) -> np.ndar
     o_total = U_record[-1]
 
     x_grid = np.linspace(0, cfg.grid.x_max_nm, cfg.grid.n_x)
-    GenSimReport(cfg, x_grid, o_total, time_h, bake_K, t_h, temps_K, profile_key, str(save_dir)).generate()
+    GenSimReport(
+        cfg, x_grid, o_total, time_h, bake_K, t_h, temps_K, profile_key, str(save_dir)
+    ).generate()
     (save_dir / "recipe.yml").write_text(yaml.safe_dump(seed_rec, sort_keys=False))
 
     return o_total
+
 
 ###############################################################################
 # ─── Core simulation logic ──────────────────────────────────────────────────
 ###############################################################################
 
-def run_simulation(cfg, profile: str = "time_dep", reoxidize: bool = False, n_reoxidize: int = 0,
-                   *, seed_name: str = "fresh", U_initial: Optional[np.ndarray] = None) -> None:
+
+def run_simulation(
+    cfg,
+    profile: str = "time_dep",
+    reoxidize: bool = False,
+    n_reoxidize: int = 0,
+    *,
+    seed_name: str = "fresh",
+    U_initial: Optional[np.ndarray] = None,
+) -> None:
     """Run the simulation sweep for a given configuration and profile.
 
     *U_initial* is only used for the very first solver call; afterwards the run
@@ -197,7 +215,9 @@ def run_simulation(cfg, profile: str = "time_dep", reoxidize: bool = False, n_re
     single‑seed runs while enabling batch‑seed mode.
     """
 
-    times_h = np.arange(cfg.time.start_h, cfg.time.stop_h + cfg.time.step_h, cfg.time.step_h)
+    times_h = np.arange(
+        cfg.time.start_h, cfg.time.stop_h + cfg.time.step_h, cfg.time.step_h
+    )
     bake_C_list = np.arange(
         cfg.temperature.start_C,
         cfg.temperature.stop_C + cfg.temperature.step_C,
@@ -231,9 +251,13 @@ def run_simulation(cfg, profile: str = "time_dep", reoxidize: bool = False, n_re
         for time_hold in times_h:
             tic = time.perf_counter()
 
-            t_h, temps_K, total_h = ProfileCls(cfg, start_K, bake_K, time_hold).generate()
+            t_h, temps_K, total_h = ProfileCls(
+                cfg, start_K, bake_K, time_hold
+            ).generate()
 
-            print(f"Running {profile} profile @ {bake_C:.0f}°C, hold time: {time_hold:.2f}h, total time: {total_h:.2f}h")
+            print(
+                f"Running {profile} profile @ {bake_C:.0f}°C, hold time: {time_hold:.2f}h, total time: {total_h:.2f}h"
+            )
 
             solver = CNSolver(cfg, temps_K, total_h, civ_model, U_initial=U_initial)
             U_record = solver.get_oxygen_profile()
@@ -243,23 +267,46 @@ def run_simulation(cfg, profile: str = "time_dep", reoxidize: bool = False, n_re
             if reoxidize:
                 for n in range(n_reoxidize):
                     pass_dir = f"{reox_output_dir}_reoxidize_{n+1}"
-                    report = GenSimReport(cfg, x_grid, o_total, time_hold, bake_K, t_h, temps_K, profile, pass_dir)
+                    report = GenSimReport(
+                        cfg,
+                        x_grid,
+                        o_total,
+                        time_hold,
+                        bake_K,
+                        t_h,
+                        temps_K,
+                        profile,
+                        pass_dir,
+                    )
                     report.generate()
                     print(f"Re-oxidizing {n+1} pass of {n_reoxidize}...")
-                    solver = CNSolver(cfg, temps_K, total_h, civ_model, U_initial=o_total)
+                    solver = CNSolver(
+                        cfg, temps_K, total_h, civ_model, U_initial=o_total
+                    )
                     U_record = solver.get_oxygen_profile()
                     o_total = U_record[-1]
                     print(f"Re-oxidization pass {n+1} complete. output → {pass_dir}")
                 output_dir = f"{reox_output_dir}_reoxidized"
             else:
                 output_dir = reox_output_dir
-            report = GenSimReport(cfg, x_grid, o_total, time_hold, bake_K, t_h, temps_K, profile, output_dir)
+            report = GenSimReport(
+                cfg,
+                x_grid,
+                o_total,
+                time_hold,
+                bake_K,
+                t_h,
+                temps_K,
+                profile,
+                output_dir,
+            )
             report.generate()
 
             elapsed = time.perf_counter() - tic
             print(
                 f"Done: {profile} profile @ {bake_C:.0f}°C, hold time: {time_hold:.2f}h, total_time={total_h:.2f}h,\n "
-                f"Completed in {elapsed:.2f}s, output → {output_dir}")
+                f"Completed in {elapsed:.2f}s, output → {output_dir}"
+            )
 
     print(f"Total simulations: {total_simulations}")
     if total_simulations > threshold:
@@ -271,9 +318,11 @@ def run_simulation(cfg, profile: str = "time_dep", reoxidize: bool = False, n_re
         else:
             CurrentDensityAnalyzer(output_dir).run()
 
+
 ###############################################################################
 # ─── Batch orchestrator ─────────────────────────────────────────────────────
 ###############################################################################
+
 
 def run_batch(cfg, seed_yaml: Path, profile: str, reoxidize: bool, n_reoxidize: int):
     seeds = _load_seed_yaml(seed_yaml)
@@ -284,11 +333,15 @@ def run_batch(cfg, seed_yaml: Path, profile: str, reoxidize: bool, n_reoxidize: 
         seed_name = rec.get("name", f"seed_{rec.get('bake_C')}C_{rec.get('time_h')}h")
         seed_out_dir = seeds_dir / seed_name
         U0 = _simulate_one_seed(cfg, rec, seed_out_dir)
-        run_simulation(cfg, profile, reoxidize, n_reoxidize, seed_name=seed_name, U_initial=U0)
+        run_simulation(
+            cfg, profile, reoxidize, n_reoxidize, seed_name=seed_name, U_initial=U0
+        )
+
 
 ###############################################################################
 # ─── Command‑line interface ─────────────────────────────────────────────────
 ###############################################################################
+
 
 def _resolve_cfg(cfg_arg: str | None, pos_arg: str | None) -> Path:
     fname = cfg_arg or pos_arg or "sim_config.yml"
@@ -301,26 +354,58 @@ def _resolve_cfg(cfg_arg: str | None, pos_arg: str | None) -> Path:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="sim", description="Nb heat‑treatment simulator")
+    parser = argparse.ArgumentParser(
+        prog="sim", description="Nb heat‑treatment simulator"
+    )
     subparsers = parser.add_subparsers(dest="mode", required=False)
 
     # default/legacy
     parser.add_argument("-c", "--config", metavar="CONFIG", help="YAML config file")
-    parser.add_argument("-p", "--profile", choices=["const", "time_dep", "two_step"], default="time_dep",
-                        help="Temperature profile to use")
-    parser.add_argument("-r", "--reoxidize", metavar="N", type=int, nargs="?", const=1, default=0,
-                        help="Number of re‑oxidization passes (omit flag for 0)")
-    parser.add_argument("pos_config", nargs="?", metavar="CONFIG", help="Positional YAML config")
+    parser.add_argument(
+        "-p",
+        "--profile",
+        choices=["const", "time_dep", "two_step"],
+        default="time_dep",
+        help="Temperature profile to use",
+    )
+    parser.add_argument(
+        "-r",
+        "--reoxidize",
+        metavar="N",
+        type=int,
+        nargs="?",
+        const=1,
+        default=0,
+        help="Number of re‑oxidization passes (omit flag for 0)",
+    )
+    parser.add_argument(
+        "pos_config", nargs="?", metavar="CONFIG", help="Positional YAML config"
+    )
 
     # batch sub‑command
     batch = subparsers.add_parser("batch", help="Run seeds from YAML then sweep")
     batch.add_argument("seed_yaml", type=Path, help="YAML file listing seed recipes")
     batch.add_argument("-c", "--config", metavar="CONFIG", help="YAML config file")
-    batch.add_argument("-p", "--profile", choices=["const", "time_dep", "two_step"], default="time_dep",
-                       help="Temperature profile to use in sweep")
-    batch.add_argument("-r", "--reoxidize", metavar="N", type=int, nargs="?", const=1, default=0,
-                       help="Number of re‑oxidization passes (omit flag for 0)")
-    batch.add_argument("pos_config", nargs="?", metavar="CONFIG", help="Positional YAML config")
+    batch.add_argument(
+        "-p",
+        "--profile",
+        choices=["const", "time_dep", "two_step"],
+        default="time_dep",
+        help="Temperature profile to use in sweep",
+    )
+    batch.add_argument(
+        "-r",
+        "--reoxidize",
+        metavar="N",
+        type=int,
+        nargs="?",
+        const=1,
+        default=0,
+        help="Number of re‑oxidization passes (omit flag for 0)",
+    )
+    batch.add_argument(
+        "pos_config", nargs="?", metavar="CONFIG", help="Positional YAML config"
+    )
     args = parser.parse_args()
 
     cfg_path = _resolve_cfg(args.config, args.pos_config)
@@ -332,9 +417,12 @@ def main() -> None:
     _save_run_metadata(cfg_path, args, run_root, cfg)
 
     if args.mode == "batch":
-        run_batch(cfg, args.seed_yaml, args.profile, bool(args.reoxidize), args.reoxidize)
+        run_batch(
+            cfg, args.seed_yaml, args.profile, bool(args.reoxidize), args.reoxidize
+        )
     else:
         run_simulation(cfg, args.profile, bool(args.reoxidize), args.reoxidize)
+
 
 if __name__ == "__main__":
     main()

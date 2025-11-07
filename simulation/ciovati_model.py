@@ -10,23 +10,27 @@ import numpy as np
 from scipy import constants, integrate
 from dataclasses import dataclass
 
+
 @dataclass
 class CiovatiParams:
     """
     Parameter container for Ciovati model.
     """
-    D_0: float       # Pre-exponential factor for diffusion (cm^2/s)
-    E_A_D: float     # Activation energy for diffusion (J/mol·K)
-    k_A: float       # Pre-exponential factor for surface dissolution (1/s)
-    E_A_k: float     # Activation energy for dissolution (J/mol·K)
-    u_0: float       # Total amount of surface oxygen (at.%·nm)
-    v_0: float       # Initial interstitial amount (at.%·nm)
-    c_0: float = 0.0 # Uniform bulk concentration (at.% )
+
+    D_0: float  # Pre-exponential factor for diffusion (cm^2/s)
+    E_A_D: float  # Activation energy for diffusion (J/mol·K)
+    k_A: float  # Pre-exponential factor for surface dissolution (1/s)
+    E_A_k: float  # Activation energy for dissolution (J/mol·K)
+    u_0: float  # Total amount of surface oxygen (at.%·nm)
+    v_0: float  # Initial interstitial amount (at.%·nm)
+    c_0: float = 0.0  # Uniform bulk concentration (at.% )
+
 
 class CiovatiModel:
     """
     Ciovati model for oxygen concentration in niobium.
     """
+
     def __init__(self, p: CiovatiParams):
         self.p = p
 
@@ -134,8 +138,8 @@ class CiovatiModel:
         # evaluate the integral
         integral, _ = integrate.quad(
             self._u_integrand,
-            0,            # lower integration limit
-            t,            # upper integration limit
+            0,  # lower integration limit
+            t,  # upper integration limit
             args=(x, t, T),
             full_output=False,
             epsabs=np.sqrt(np.finfo(float).eps),

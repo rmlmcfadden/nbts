@@ -16,7 +16,7 @@ and store three PDF heat‑map figures there.
 
 # ─── CONFIG SECTION ─────────────────────────────────────────────────────
 PARENT_DIR = "experiments/2025-05-18_time_dep_9db8969"  # <— edit me
-STEP_GLOB  = "results_reoxidize*"  # Pattern for pass directories
+STEP_GLOB = "results_reoxidize*"  # Pattern for pass directories
 # ────────────────────────────────────────────────────────────────────────
 
 from scripts.simulation_analyzer import (

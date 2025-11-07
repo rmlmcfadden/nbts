@@ -10,6 +10,7 @@ import numpy as np
 from scipy import constants
 from scipy.special import zeta
 
+
 def ell(
     c: float,
     a_0: float = 4.5e-12,
@@ -37,14 +38,13 @@ def ell(
     c_ppma = c * stoich_per_at_percent * ppma_per_stoich
 
     # Clip the denominator to avoid it being too small
-    #denominator = np.clip(a_0 * c_ppma, epsilon, None)
+    # denominator = np.clip(a_0 * c_ppma, epsilon, None)
     denominator = a_0 * c_ppma
 
     ell_m = sigma_0 / denominator  # in meters
     nm_per_m = 1e9
-    ell_nm = ell_m * nm_per_m      # convert to nm
+    ell_nm = ell_m * nm_per_m  # convert to nm
     return ell_nm
-
 
 
 def lambda_eff(
@@ -87,14 +87,14 @@ def B(
     demagnetization_factor: Annotated[float, 0:1] = 0.0,
 ) -> Sequence[float]:
     """Meissner screening profile for the simple London model.
-    
+
     Args:
         z_nm: Depth below the surface (nm).
         penetration_depth_nm: Magnetic penetration depth (nm).
         applied_field_G: Applied magnetic field (G).
         dead_layer_nm: Non-superconducting dead layer thickness (nm).
         demagnetization_factor: Effective demagnetization factor.
-    
+
     Returns:
         The magnetic field as a function of depth (G).
     """
@@ -112,14 +112,14 @@ def J(
     demagnetization_factor: Annotated[float, 0:1] = 0.0,
 ) -> Sequence[float]:
     """Meissner current density for the simple London model.
-    
+
     Args:
         z_nm: Depth below the surface (nm).
         penetration_depth_nm: Magnetic penetration depth (nm).
         applied_field_G: Applied magnetic field (G).
         dead_layer_nm: Non-superconducting dead layer thickness (nm).
         demagnetization_factor: Effective demagnetization factor.
-    
+
     Returns:
         The current density as a function of the depth (A m^-2).
     """
@@ -147,16 +147,17 @@ def J(
         )
     )
 
+
 def J_c(
     penetration_depth_nm: Annotated[float, 0:None],
-    B_c: float=199.3,  # Critical magnetic field in mT (default for Nb)
+    B_c: float = 199.3,  # Critical magnetic field in mT (default for Nb)
 ):
     """Critical current density for the simple London model.
-    
+
     Args:
         penetration_depth_nm: Magnetic penetration depth (nm).
         B_c: Critical magnetic field (mT).
-    
+
     Returns:
         The critical current density (A m^-2).
     """
@@ -166,28 +167,27 @@ def J_c(
     m_per_nm = 1e-9
     mu_0 = constants.value("vacuum mag. permeability") * G_per_T
     penetration_depth_m = penetration_depth_nm * m_per_nm
-    
-    return B_c / (mu_0 * penetration_depth_m )
+
+    return B_c / (mu_0 * penetration_depth_m)
 
 
 def chi(a_imp, n_max=2000) -> float:
     """
     Gor'kov function χ(a_imp) ≈ (8 / [7 ζ(3)]) * sum_{n=0}^∞ [1 / ((2n+1)^2 (2n+1 + a_imp))].
-    
+
     a_imp : float
         The impurity parameter a_imp.
     n_max : int
         Truncation index for the series (increase until convergence). Must be the same as Nx, space steps in simulation.
-    
+
     Returns:
         The Gor'kov function χ(a_imp).
     """
-    zeta3 = zeta(3, 1)               # ζ(3) via the Hurwitz zeta ζ(s,q) with q=1
-    n = np.arange(n_max + 1)        # n = 0,1,2,…,n_max
-    odd = 2*n + 1
-    terms = 1.0/(odd**2 * (odd + a_imp))
-    return (8.0/(7.0*zeta3)) * np.sum(terms)
-
+    zeta3 = zeta(3, 1)  # ζ(3) via the Hurwitz zeta ζ(s,q) with q=1
+    n = np.arange(n_max + 1)  # n = 0,1,2,…,n_max
+    odd = 2 * n + 1
+    terms = 1.0 / (odd**2 * (odd + a_imp))
+    return (8.0 / (7.0 * zeta3)) * np.sum(terms)
 
 
 def kappa(
@@ -200,16 +200,16 @@ def kappa(
 
     This implements the Gor'kov correction for κ in the presence of non-magnetic
     impurities:
-    
+
         κ = κ_clean / χ(a_imp)
     Args:
-        lambda_eff (float):  
+        lambda_eff (float):
             Effective magnetic penetration depth λ_eff at finite impurity
             concentration, in nanometers (nm).
-        lambda_L (float, optional):  
+        lambda_L (float, optional):
             Clean-limit London penetration depth λ_L at zero temperature,
-            in nanometers (nm). 
-        xi_0 (float, optional):  
+            in nanometers (nm).
+        xi_0 (float, optional):
             BCS coherence length ξ_0 at zero temperature, in nanometers (nm).
 
     Returns:
@@ -219,15 +219,14 @@ def kappa(
     # convert inputs to nanometers (factor cancels in the κ_clean ratio)
     nm_per_m = 1e9
     lambda_L_nm = lambda_L * nm_per_m
-    xi_0_nm     = xi_0 * nm_per_m
+    xi_0_nm = xi_0 * nm_per_m
 
     kappa_clean = 0.957 * lambda_L_nm / xi_0_nm
-    a_imp       = 0.882 * xi_0_nm / lambda_eff
-    n_max      = cfg.grid.n_x - 1
-    chi_a_imp   = chi(a_imp, n_max)
+    a_imp = 0.882 * xi_0_nm / lambda_eff
+    n_max = cfg.grid.n_x - 1
+    chi_a_imp = chi(a_imp, n_max)
 
     return kappa_clean / chi_a_imp
-
 
 
 def lambda_eff_corr(
@@ -240,7 +239,7 @@ def lambda_eff_corr(
 
     λ_corr(B) = [1 + κ (κ + 2³ᐟ²) B² / (8 (κ + 2¹ᐟ²)² B_c²)] · λ_eff
 
-    Args:   
+    Args:
         lambda_eff: zero‐field penetration depth λ (nm)
         B_c:          thermodynamic critical field (default = 200mT)
 
@@ -249,14 +248,7 @@ def lambda_eff_corr(
     """
     B_0 = B(0, 100, lambda_eff)
     kappa_val = kappa(cfg, lambda_eff)
-    correction = (
-        1.0
-        + (kappa_val * (kappa_val + 2**1.5) * B_0**2)
-          / (8 * (kappa_val + 2**0.5)**2 * B_c**2)
+    correction = 1.0 + (kappa_val * (kappa_val + 2**1.5) * B_0**2) / (
+        8 * (kappa_val + 2**0.5) ** 2 * B_c**2
     )
     return correction * lambda_eff
-
-
-
-
-

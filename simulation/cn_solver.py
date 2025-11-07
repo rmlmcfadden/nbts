@@ -7,8 +7,10 @@ see also: https://math.stackexchange.com/a/3311598
 
 import numpy as np
 from scipy import sparse
-#from simulation.ciovati_model import D, q
+
+# from simulation.ciovati_model import D, q
 from simulation.dissolution_species import dc_O_dt
+
 
 class CNSolver:
     # TODO: fix docementation
@@ -39,7 +41,7 @@ class CNSolver:
         # TODO: fix D to use dissolution_species
         self.D = civ_model.D
         self.dc_o_dt = dc_O_dt
-        self.q = civ_model.q    
+        self.q = civ_model.q
 
         # Spatial and temporal grids
         self.x_max = cfg.grid.x_max_nm
@@ -56,27 +58,30 @@ class CNSolver:
 
         # Initial concentration
         if U_initial is None:
-            self.U_initial = sparse.csr_array([self.v_0 / self.dx] + [self.base_O / self.dx] * (self.N_x - 1))
+            self.U_initial = sparse.csr_array(
+                [self.v_0 / self.dx] + [self.base_O / self.dx] * (self.N_x - 1)
+            )
         else:
             U_initial[0] += self.v_0 / self.dx
             self.U_initial = sparse.csr_array(U_initial)
 
         # Constants
-        self.D_u_max = self.D(np.max(self.T))  # Maximum diffusion coefficient (in nm^2/s)
+        self.D_u_max = self.D(
+            np.max(self.T)
+        )  # Maximum diffusion coefficient (in nm^2/s)
         self.r_max = (np.max(self.D_u_max) * self.dt) / (self.dx * self.dx)
         self.stability = "STABLE" if self.r_max <= 0.5 else "POTENTIAL OSCILLATIONS"
 
         self.r = float
         self.sigma = float
 
-
-    def gen_sparse_matrices(self, i):      
+    def gen_sparse_matrices(self, i):
         """Generate the sparse matrices "A" and "B" used by the Crank-Nicolson method.
-        
+
         Args:
             N_x: Dimension of (square) matrices.
             sigma: The "nudging" parameter.
-        
+
         Returns:
             The (sparse) matrices A and B.
         """
@@ -91,13 +96,15 @@ class CNSolver:
         _offsets = [1, 0, -1]
         _shape = (self.N_x, self.N_x)
         _format = "csr"
-        
+
         # define matrix A's elements
         _A_upper = [-self.sigma]
-        _A_diag = [1 + self.sigma] + [1 + 2 * self.sigma] * (self.N_x - 2) + [1 + self.sigma]
+        _A_diag = (
+            [1 + self.sigma] + [1 + 2 * self.sigma] * (self.N_x - 2) + [1 + self.sigma]
+        )
         _A_lower = [-self.sigma]
         _A_elements = [_A_upper, _A_diag, _A_lower]
-        
+
         # create matrix A
         _A = sparse.diags_array(
             _A_elements,
@@ -105,13 +112,15 @@ class CNSolver:
             shape=_shape,
             format=_format,
         )
-        
+
         # define matrix B's elements
         _B_upper = [self.sigma]
-        _B_diag = [1 - self.sigma] + [1 - 2 * self.sigma] * (self.N_x - 2) + [1 - self.sigma]
+        _B_diag = (
+            [1 - self.sigma] + [1 - 2 * self.sigma] * (self.N_x - 2) + [1 - self.sigma]
+        )
         _B_lower = [self.sigma]
         _B_elements = [_B_upper, _B_diag, _B_lower]
-        
+
         # create matrix A
         _B = sparse.diags_array(
             _B_elements,
@@ -119,10 +128,9 @@ class CNSolver:
             shape=(self.N_x, self.N_x),
             format=_format,
         )
-        
+
         # return both matrix A and B
         return _A, _B
-
 
     def get_oxygen_profile(self):
         """Solve the diffusion equation using the Crank-Nicolson method.
@@ -131,7 +139,7 @@ class CNSolver:
             np.ndarray: The solution record (time x space).
         """
         # Initial condition: Concentration is all in the first spatial bin
-        #U_initial = sparse.csr_array([self.v_0 / self.dx] + [0] * (self.N_x - 1))
+        # U_initial = sparse.csr_array([self.v_0 / self.dx] + [0] * (self.N_x - 1))
         U_record = np.zeros((self.N_t, self.N_x), dtype=np.double)
 
         for i, t in enumerate(self.t_grid):
@@ -146,8 +154,11 @@ class CNSolver:
                 U_record[i] = self.U_initial.toarray()
             else:
                 # Source term (plane source at x = 0)
-                #f_vec = sparse.csr_array([self.q(t, self.T[i]) * (self.dt / self.dx)] + [0] * (self.N_x - 1))
-                f_vec = sparse.csr_array([self.dc_o_dt(t, self.T[i], self.u_0, 0) * (self.dt / self.dx)] + [0] * (self.N_x - 1)) 
+                # f_vec = sparse.csr_array([self.q(t, self.T[i]) * (self.dt / self.dx)] + [0] * (self.N_x - 1))
+                f_vec = sparse.csr_array(
+                    [self.dc_o_dt(t, self.T[i], self.u_0, 0) * (self.dt / self.dx)]
+                    + [0] * (self.N_x - 1)
+                )
 
                 # Generate matrices (could be precomputed if D_u is constant)
                 A, B = self.gen_sparse_matrices(i)
@@ -158,4 +169,3 @@ class CNSolver:
                 U_record[i] = U_new
 
         return U_record
-    

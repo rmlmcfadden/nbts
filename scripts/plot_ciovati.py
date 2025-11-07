@@ -22,8 +22,8 @@ config_path = "config/sim_config.yml"
 out_dir = "experiments/ciovati"
 
 # Manual inputs
-time_h = 100.0       # time in hours
-temp_C = 200.0     # temperature in °C
+time_h = 100.0  # time in hours
+temp_C = 200.0  # temperature in °C
 # ────────────────────────────────────────────────────────────────────────────────
 
 # Load simulation config
@@ -31,18 +31,18 @@ cfg: SimConfig = load_sim_config(config_path)
 
 # Extract grid parameters from config
 x_max_nm = cfg.grid.x_max_nm
-n_x      = cfg.grid.n_x
+n_x = cfg.grid.n_x
 
 # Extract Ciovati parameters
 ciov_cfg = cfg.ciovati
 params = CiovatiParams(
-    D_0   = ciov_cfg.D_0,
-    E_A_D = ciov_cfg.E_A_D,
-    k_A   = ciov_cfg.k_A,
-    E_A_k = ciov_cfg.E_A_k,
-    u_0   = ciov_cfg.u_0,
-    v_0   = ciov_cfg.v_0,
-    c_0   = getattr(ciov_cfg, "c_0", 0.0)
+    D_0=ciov_cfg.D_0,
+    E_A_D=ciov_cfg.E_A_D,
+    k_A=ciov_cfg.k_A,
+    E_A_k=ciov_cfg.E_A_k,
+    u_0=ciov_cfg.u_0,
+    v_0=ciov_cfg.v_0,
+    c_0=getattr(ciov_cfg, "c_0", 0.0),
 )
 model = CiovatiModel(params)
 
@@ -50,8 +50,8 @@ model = CiovatiModel(params)
 os.makedirs(out_dir, exist_ok=True)
 
 # Convert manual inputs
-time_s = time_h * 3600.0    # hours to seconds
-T_K    = temp_C + 273.15    # °C to K
+time_s = time_h * 3600.0  # hours to seconds
+T_K = temp_C + 273.15  # °C to K
 
 # Generate depth grid and compute concentration profile
 x = np.linspace(0, x_max_nm, n_x)

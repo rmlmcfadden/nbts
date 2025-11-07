@@ -29,11 +29,9 @@ from types import SimpleNamespace
 class BaseTempProfile(ABC):
     """Abstract interface for temperature profiles."""
 
-    def __init__(self,
-                 cfg: SimpleNamespace,
-                 start_K: float,
-                 bake_K: float,
-                 total_h: float):
+    def __init__(
+        self, cfg: SimpleNamespace, start_K: float, bake_K: float, total_h: float
+    ):
         """
         Parameters
         ----------
@@ -48,11 +46,11 @@ class BaseTempProfile(ABC):
         total_h : float
             Hold duration at bake_K in hours.
         """
-        self.cfg     = cfg
+        self.cfg = cfg
         self.start_K = start_K
-        self.bake_K  = bake_K
+        self.bake_K = bake_K
         self.total_h = total_h
-        self.n_t     = cfg.grid.n_t  # total number of output steps
+        self.n_t = cfg.grid.n_t  # total number of output steps
 
     @abstractmethod
     def generate(self) -> tuple[np.ndarray, np.ndarray, float]:
@@ -76,11 +74,11 @@ class ConstantProfile(BaseTempProfile):
 
     def generate(self):
         # Uniform time grid from 0 -> total_h hours
-        time_h     = np.linspace(0.0, self.total_h, self.n_t)
+        time_h = np.linspace(0.0, self.total_h, self.n_t)
         # Flat-line at bake_K
-        temps_K    = np.full(self.n_t, self.bake_K, dtype=np.double)
+        temps_K = np.full(self.n_t, self.bake_K, dtype=np.double)
         # Everything is "hold" here
-        t_hold_h   = self.total_h
+        t_hold_h = self.total_h
         return time_h, temps_K, t_hold_h
 
 
@@ -120,9 +118,9 @@ class TimeDepProfile(BaseTempProfile):
 
     def generate(self):
         # Unpack config
-        ramp_rate      = self.cfg.temp_profile.ramp_rate_C_per_min  # K/min
-        cooling_time_h = self.cfg.temp_profile.cooling_time_h       # h
-        tol_K          = self.cfg.temp_profile.tol_K                # tolerance (K)
+        ramp_rate = self.cfg.temp_profile.ramp_rate_C_per_min  # K/min
+        cooling_time_h = self.cfg.temp_profile.cooling_time_h  # h
+        tol_K = self.cfg.temp_profile.tol_K  # tolerance (K)
 
         # Convert durations to minutes
         t_heat = (self.bake_K - self.start_K) / ramp_rate
@@ -148,24 +146,21 @@ class TimeDepProfile(BaseTempProfile):
         # Piecewise definition with explicit 'tau'
         temps_K = np.piecewise(
             t,
-            [t <= t_heat,
-             (t > t_heat) & (t <= t_heat + t_hold),
-             t > t_heat + t_hold],
+            [t <= t_heat, (t > t_heat) & (t <= t_heat + t_hold), t > t_heat + t_hold],
             [
                 # HEATING
                 lambda tau: self.start_K + ramp_rate * tau,
                 # HOLD
                 lambda tau: self.bake_K,
                 # COOLING
-                lambda tau: a_dyn * np.exp(-b_per_min * (tau - t_heat - t_hold)) + self.start_K
-            ]
+                lambda tau: a_dyn * np.exp(-b_per_min * (tau - t_heat - t_hold))
+                + self.start_K,
+            ],
         )
 
         # Convert minutes to hours
         time_h = t / 60.0
         return time_h, temps_K, total_min / 60.0
-
-    
 
 
 class TwoStepProfile(BaseTempProfile):
@@ -177,25 +172,26 @@ class TwoStepProfile(BaseTempProfile):
     4. Hold   at t2_K for bake2_h hours
     5. Cool   exponentially toward start_K over cooling_time_h hours
     """
+
     def generate(self):
         # Unpack config
-        ramp_rate      = self.cfg.temp_profile.ramp_rate_C_per_min  # K/min
-        cooling_time_h = self.cfg.temp_profile.cooling_time_h       # h
-        tol_K          = self.cfg.temp_profile.tol_K                # tolerance K
+        ramp_rate = self.cfg.temp_profile.ramp_rate_C_per_min  # K/min
+        cooling_time_h = self.cfg.temp_profile.cooling_time_h  # h
+        tol_K = self.cfg.temp_profile.tol_K  # tolerance K
 
         # Unpack two-step params
-        ts      = self.cfg.temp_profile.two_step
-        t1_K    = ts.t1_C    + 273.15  # first-step peak (K)
-        bake1_h = ts.bake1_h           # hold time at t1_K (h)
-        t2_K    = ts.t2_C    + 273.15  # second-step peak (K)
-        bake2_h = ts.bake2_h           # hold time at t2_K (h)
+        ts = self.cfg.temp_profile.two_step
+        t1_K = ts.t1_C + 273.15  # first-step peak (K)
+        bake1_h = ts.bake1_h  # hold time at t1_K (h)
+        t2_K = ts.t2_C + 273.15  # second-step peak (K)
+        bake2_h = ts.bake2_h  # hold time at t2_K (h)
 
         # Compute individual phase durations (minutes)
         t_ramp1 = (t1_K - self.start_K) / ramp_rate
         t_hold1 = bake1_h * 60.0
         t_ramp2 = (t2_K - t1_K) / ramp_rate
         t_hold2 = bake2_h * 60.0
-        t_cool  = cooling_time_h * 60.0
+        t_cool = cooling_time_h * 60.0
 
         # Dynamic amplitude for cooling
         a_dyn = t2_K - self.start_K
@@ -217,8 +213,9 @@ class TwoStepProfile(BaseTempProfile):
                 t <= t_ramp1,
                 (t > t_ramp1) & (t <= t_ramp1 + t_hold1),
                 (t > t_ramp1 + t_hold1) & (t <= t_ramp1 + t_hold1 + t_ramp2),
-                (t > t_ramp1 + t_hold1 + t_ramp2) & (t <= t_ramp1 + t_hold1 + t_ramp2 + t_hold2),
-                t > t_ramp1 + t_hold1 + t_ramp2 + t_hold2
+                (t > t_ramp1 + t_hold1 + t_ramp2)
+                & (t <= t_ramp1 + t_hold1 + t_ramp2 + t_hold2),
+                t > t_ramp1 + t_hold1 + t_ramp2 + t_hold2,
             ],
             [
                 # 1) ramp to t1_K
@@ -230,8 +227,10 @@ class TwoStepProfile(BaseTempProfile):
                 # 4) hold at t2_K
                 lambda tau: t2_K,
                 # 5) exponential cooldown
-                lambda tau: a_dyn * np.exp(-b_per_min * (tau - t_ramp1 - t_hold1 - t_ramp2 - t_hold2)) + self.start_K
-            ]
+                lambda tau: a_dyn
+                * np.exp(-b_per_min * (tau - t_ramp1 - t_hold1 - t_ramp2 - t_hold2))
+                + self.start_K,
+            ],
         )
 
         # Convert minutes -> hours for the x-axis
@@ -239,7 +238,6 @@ class TwoStepProfile(BaseTempProfile):
         # return holds combined in minutes
         t_hold_total = t_hold1 + t_hold2
         return time_h, temps_K, total_min / 60.0
-
 
 
 class RampHoldProfile(BaseTempProfile):
@@ -276,7 +274,7 @@ class RampHoldProfile(BaseTempProfile):
     def generate(self):
         # Unpack config
         ramp_rate = self.cfg.temp_profile.ramp_rate_C_per_min  # K/min
-        n_t       = self.n_t                                   # number of time steps
+        n_t = self.n_t  # number of time steps
 
         # Compute durations in minutes
         t_heat = (self.bake_K - self.start_K) / ramp_rate
@@ -294,8 +292,8 @@ class RampHoldProfile(BaseTempProfile):
                 # 1) HEATING
                 lambda tau: self.start_K + ramp_rate * tau,
                 # 2) HOLD
-                lambda tau: self.bake_K
-            ]
+                lambda tau: self.bake_K,
+            ],
         )
 
         # Convert minutes -> hours
@@ -303,66 +301,60 @@ class RampHoldProfile(BaseTempProfile):
         return time_h, temps_K, total_min / 60.0  # t_hold in hours
 
 
-
-
 def main():
     """Quick visual sanity-check of constant, three-phase, and two-step profiles."""
     # dummy config stub
     cfg = SimpleNamespace(
         temp_profile=SimpleNamespace(
-            ramp_rate_C_per_min=2.0,   # 2 K/mi
-            cooling_time_h=4.0,     # 24 h
-            tol_K=1.0,                 # stop when within 1 K
+            ramp_rate_C_per_min=2.0,  # 2 K/mi
+            cooling_time_h=4.0,  # 24 h
+            tol_K=1.0,  # stop when within 1 K
             two_step=SimpleNamespace(
-                t1_C=80.0,    # first-step peak temp (°C)
-                bake1_h=24.0, # hold at t1 for 24 h
-                t2_C=120.0,   # second-step peak temp (°C)
-                bake2_h=48.0  # hold at t2 for 48 h
-            )
+                t1_C=80.0,  # first-step peak temp (°C)
+                bake1_h=24.0,  # hold at t1 for 24 h
+                t2_C=120.0,  # second-step peak temp (°C)
+                bake2_h=48.0,  # hold at t2 for 48 h
+            ),
         ),
-        grid=SimpleNamespace(
-            n_t=2001                  # 2001 time points
-        )
+        grid=SimpleNamespace(n_t=2001),  # 2001 time points
     )
 
     # example parameters (°C → K)
     start_C, bake_C, total_h = 20.0, 120.0, 48.0
     start_K = start_C + 273.15
-    bake_K  = bake_C  + 273.15
+    bake_K = bake_C + 273.15
 
     # instantiate profiles
     time_dep = TimeDepProfile(cfg, start_K, bake_K, total_h)
     const = ConstantProfile(cfg, start_K, bake_K, total_h)
-    two   = TwoStepProfile(   cfg, start_K, bake_K, total_h)
+    two = TwoStepProfile(cfg, start_K, bake_K, total_h)
     ramp_hold = RampHoldProfile(cfg, start_K, bake_K, total_h)
 
-
     # generate
-    t3, T3, _   = time_dep.generate()
-    tc, Tc, _   = const.generate()
+    t3, T3, _ = time_dep.generate()
+    tc, Tc, _ = const.generate()
     t2s, T2s, _ = two.generate()
     t_rh, T_rh, _ = ramp_hold.generate()
 
     # plot them all
-    fig, ax = plt.subplots(figsize=(8,4))
-    ax.plot(t_rh, T_rh, label='Ramp→Hold')
-    ax.plot(t3,  T3,  label='Three-Phase Ramp→Hold→Cool')
-    ax.plot(tc,  Tc,  '--', label='Constant @ Bake Temp')
-    ax.plot(t2s, T2s, '-.', label='Two-Step Ramp→Hold1→Ramp→Hold2→Cool')
+    fig, ax = plt.subplots(figsize=(8, 4))
+    ax.plot(t_rh, T_rh, label="Ramp→Hold")
+    ax.plot(t3, T3, label="Three-Phase Ramp→Hold→Cool")
+    ax.plot(tc, Tc, "--", label="Constant @ Bake Temp")
+    ax.plot(t2s, T2s, "-.", label="Two-Step Ramp→Hold1→Ramp→Hold2→Cool")
 
-    ax.set_xlabel('Time (h)')
-    ax.set_ylabel('Temperature (K)')
+    ax.set_xlabel("Time (h)")
+    ax.set_ylabel("Temperature (K)")
     ax2 = ax.secondary_yaxis(
-        'right',
-        functions=(lambda x: x - 273.15, lambda x: x + 273.15)
+        "right", functions=(lambda x: x - 273.15, lambda x: x + 273.15)
     )
-    ax2.set_ylabel('Temperature (°C)')
+    ax2.set_ylabel("Temperature (°C)")
 
-    ax.legend(loc='best')
-    plt.title('Temperature Profile Examples')
+    ax.legend(loc="best")
+    plt.title("Temperature Profile Examples")
     plt.tight_layout()
     plt.show()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

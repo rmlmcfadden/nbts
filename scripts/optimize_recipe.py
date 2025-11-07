@@ -20,9 +20,9 @@ Strategy
 
 # ─── CONFIG SECTION ─────────────────────────────────────────────────────
 PARENT_DIR = "experiments/2025-05-24_const_e10b3cd"
-STEP_GLOB  = "results"      # matches _1, _2, _d, …
-N_PASSES   = None                      # auto‑detect everything present
-TOP_K      = 5                         # how many best combos to list
+STEP_GLOB = "results"  # matches _1, _2, _d, …
+N_PASSES = None  # auto‑detect everything present
+TOP_K = 5  # how many best combos to list
 # ────────────────────────────────────────────────────────────────────────
 
 from pathlib import Path
@@ -54,31 +54,31 @@ def main() -> None:
     data_dir = analyzer.analysis_dir / "data"
     data_dir.mkdir(exist_ok=True)
 
-    Z_max, _     = analyzer.metrics["max_current"]
-    Z_surf, _    = analyzer.metrics["surface_current"]
-    Z_xpeak, _   = analyzer.metrics["x_peak"]
+    Z_max, _ = analyzer.metrics["max_current"]
+    Z_surf, _ = analyzer.metrics["surface_current"]
+    Z_xpeak, _ = analyzer.metrics["x_peak"]
 
     times, temps = analyzer.times, analyzer.temps
-    n_pass       = analyzer.n_passes
+    n_pass = analyzer.n_passes
 
-    global_best = (np.inf, None, None, None)        # dist, pass, t, T
-    summary_lines: list[str] = []                   # collect console text
+    global_best = (np.inf, None, None, None)  # dist, pass, t, T
+    summary_lines: list[str] = []  # collect console text
 
     # ─── examine each pass ──────────────────────────────────────────────
     for p_idx in range(n_pass):
-        z_max  = Z_max[p_idx]
+        z_max = Z_max[p_idx]
         z_surf = Z_surf[p_idx]
-        z_x    = Z_xpeak[p_idx]
+        z_x = Z_xpeak[p_idx]
 
-        n_max  = normalise(z_max, minimise=True)
+        n_max = normalise(z_max, minimise=True)
         n_surf = normalise(z_surf, minimise=True)
-        n_x    = normalise(z_x,   minimise=False)
+        n_x = normalise(z_x, minimise=False)
 
-        dist = np.sqrt(n_max**2 + n_surf**2 + (1 - n_x)**2)
+        dist = np.sqrt(n_max**2 + n_surf**2 + (1 - n_x) ** 2)
 
-        flat  = dist.flatten()
+        flat = dist.flatten()
         valid = ~np.isnan(flat)
-        order = np.argsort(flat[valid])             # ascending = better
+        order = np.argsort(flat[valid])  # ascending = better
 
         header = f"\nPass {p_idx+1} — best {TOP_K} recipes (closest to ideal):"
         print(header)
@@ -92,15 +92,17 @@ def main() -> None:
 
         for rank, flat_idx in enumerate(np.flatnonzero(valid)[order[:TOP_K]], 1):
             j, i = np.unravel_index(flat_idx, dist.shape)
-            d    = dist[j, i]
+            d = dist[j, i]
             t_val, T_val = times[i], temps[j]
-            line = (f"  {rank:>2}:  time = {t_val:6.2f} h, "
-                    f"temp = {T_val:6.1f} °C   →  distance = {d:7.4f}")
+            line = (
+                f"  {rank:>2}:  time = {t_val:6.2f} h, "
+                f"temp = {T_val:6.1f} °C   →  distance = {d:7.4f}"
+            )
             print(line)
             summary_lines.append(line)
 
             if d < global_best[0]:
-                global_best = (d, p_idx+1, t_val, T_val)
+                global_best = (d, p_idx + 1, t_val, T_val)
 
         # save full distance matrix
         df = pd.DataFrame(

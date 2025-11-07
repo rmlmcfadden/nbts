@@ -9,16 +9,16 @@ Custom plotting for paper figures
 """
 
 # ─── CONFIG SECTION ─────────────────────────────────────────────────────
-BASE_DIR     = "experiments/2025-06-04_const_3c448e2"  # path to the main experiment folder
-RESULTS_DIR   = "results"     # subfolder inside BASE_DIR
-OUTPUT_DIR   = "figures"     # created inside BASE_DIR/..
-COLORMAP     = "cividis"             # change freely
-LEVELS_A     = 5                    # contour levels for each heat‑map
-LEVELS_B     =  1
-LEVELS_C     = 6
-LEVELS_D     = 6
-LEVELS_E     = 6
-DPI          = 400                   # PDF/PNG output resolution
+BASE_DIR = "experiments/2025-06-04_const_3c448e2"  # path to the main experiment folder
+RESULTS_DIR = "results"  # subfolder inside BASE_DIR
+OUTPUT_DIR = "figures"  # created inside BASE_DIR/..
+COLORMAP = "cividis"  # change freely
+LEVELS_A = 5  # contour levels for each heat‑map
+LEVELS_B = 1
+LEVELS_C = 6
+LEVELS_D = 6
+LEVELS_E = 6
+DPI = 400  # PDF/PNG output resolution
 # ────────────────────────────────────────────────────────────────────────
 
 from pathlib import Path
@@ -28,7 +28,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata, CubicSpline, UnivariateSpline
 from scipy.ndimage import gaussian_filter
-from scipy.signal      import savgol_filter   # simple 1‑D smoother
+from scipy.signal import savgol_filter  # simple 1‑D smoother
 
 
 # ─── helpers ------------------------------------------------------------
@@ -47,6 +47,7 @@ def surface(df: pd.DataFrame, col: str):
     if s.empty:
         s = df.loc[[df["x"].idxmin()], col]
     return s.iloc[0]
+
 
 # ─── main heat‑map routine ------------------------------------------------
 def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
@@ -73,27 +74,30 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
             continue
 
         # --- sub‑grid peak on a cubic spline -----------------------------
-        x  = df["x" ].to_numpy()
-        J  = df["current_density_corrected"].to_numpy()
+        x = df["x"].to_numpy()
+        J = df["current_density_corrected"].to_numpy()
         J_c = df2["critical_current_density"].to_numpy()
         spl = CubicSpline(x, J, bc_type="natural")
         fine_x = np.linspace(x.min(), x.max(), 40001)
         J_fine = spl(fine_x)
         idx_max = J_fine.argmax()
-        x_peak = float(fine_x[idx_max])          # smooth peak position
-        J_max  = float(J_fine[idx_max])          # smooth peak value
+        x_peak = float(fine_x[idx_max])  # smooth peak position
+        J_max = float(J_fine[idx_max])  # smooth peak value
 
-        J_surf_clean  = surface(df, "J_clean_corr")   # reference @ x = 0
-        J_surf_smooth = float(spl(0.0))          # smooth J at surface
+        J_surf_clean = surface(df, "J_clean_corr")  # reference @ x = 0
+        J_surf_smooth = float(spl(0.0))  # smooth J at surface
 
-        ratioA = J_max         / J_surf_clean
+        ratioA = J_max / J_surf_clean
         ratioC = J_surf_smooth / J_surf_clean
         ratioD = J / J_c
         ratioD_integral = np.trapz(ratioD, x=x)  # integral of J / J_c
         ratioE = (J_surf_clean / J_c.max()) - (J_surf_smooth / J_c.min())
 
-        t_vals.append(t);   T_vals.append(T)
-        Z_A.append(ratioA); Z_B.append(x_peak); Z_C.append(ratioC), Z_D.append(ratioD_integral), Z_E.append(ratioE)
+        t_vals.append(t)
+        T_vals.append(T)
+        Z_A.append(ratioA)
+        Z_B.append(x_peak)
+        Z_C.append(ratioC), Z_D.append(ratioD_integral), Z_E.append(ratioE)
 
     # --------------------------- remainder unchanged ----------------------
     times = np.unique(t_vals)
@@ -111,31 +115,51 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
         A[j, i], B[j, i], C[j, i], D[j, i], E[j, i] = a, b, c, d, e
 
     heatmap_specs = [
-        ("ratio_max_over_surface.pdf", A,
-         r'$\tilde{J}\,\equiv\; \frac{\max\{J(x)\}}{\max\{J_{\mathrm{clean}}(x)\}}$', LEVELS_A),
-        ("x_peak_position.pdf", B,
-         r'$\tilde{x}\;\equiv\;\operatorname{arg\,max}_{x}\,\{J(x)\}$', LEVELS_B),
-        ("surface_current_ratio.pdf", C,
-         r'$\tilde{J}_0 \;\equiv\; \dfrac{J(x=0)}{\max\{J_{\mathrm{clean}}(x)\}}$', LEVELS_C),
-        ("integral_current_ratio.pdf", D, r'$\int_{0}^{\infty} j(x) \, \mathrm{d}x$', LEVELS_D),
-        ("surface_current_difference.pdf", E,
-         r'$j_{diff} \;\equiv\; j(x=0) - j_{clean}(x=0)$', LEVELS_E),
+        (
+            "ratio_max_over_surface.pdf",
+            A,
+            r"$\tilde{J}\,\equiv\; \frac{\max\{J(x)\}}{\max\{J_{\mathrm{clean}}(x)\}}$",
+            LEVELS_A,
+        ),
+        (
+            "x_peak_position.pdf",
+            B,
+            r"$\tilde{x}\;\equiv\;\operatorname{arg\,max}_{x}\,\{J(x)\}$",
+            LEVELS_B,
+        ),
+        (
+            "surface_current_ratio.pdf",
+            C,
+            r"$\tilde{J}_0 \;\equiv\; \dfrac{J(x=0)}{\max\{J_{\mathrm{clean}}(x)\}}$",
+            LEVELS_C,
+        ),
+        (
+            "integral_current_ratio.pdf",
+            D,
+            r"$\int_{0}^{\infty} j(x) \, \mathrm{d}x$",
+            LEVELS_D,
+        ),
+        (
+            "surface_current_difference.pdf",
+            E,
+            r"$j_{diff} \;\equiv\; j(x=0) - j_{clean}(x=0)$",
+            LEVELS_E,
+        ),
     ]
 
-    ti = np.linspace(times.min(), times.max(), len(times)*10)
-    Ti = np.linspace(temps.min(), temps.max(), len(temps)*10)
+    ti = np.linspace(times.min(), times.max(), len(times) * 10)
+    Ti = np.linspace(temps.min(), temps.max(), len(temps) * 10)
     Xd, Yd = np.meshgrid(ti, Ti)
 
     def valid_points(Z2d):
         jj, ii = np.nonzero(~np.isnan(Z2d))
         return np.column_stack([times[ii], temps[jj]]), Z2d[jj, ii]
-    
+
     # --------------------------------------------------------------------------
     # helper: return only strictly positive data points ------------------------
     def positive_points(Z2d):
-        jj, ii = np.nonzero(Z2d > 0)                 # <-  ignore all 0‑cells
+        jj, ii = np.nonzero(Z2d > 0)  # <-  ignore all 0‑cells
         return np.column_stack([times[ii], temps[jj]]), Z2d[jj, ii]
-    
 
     # helper: pick the last positive cell in each time column ------------------
     def frontier_temps(Zcoarse):
@@ -143,11 +167,11 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
         front = np.full(len(times), np.nan)
         for i, t in enumerate(times):
             col = Zcoarse[:, i]
-            jj  = np.where(col > 0)[0]
+            jj = np.where(col > 0)[0]
             if jj.size:
-                front[i] = temps[jj[-1]]       # last positive = boundary
+                front[i] = temps[jj[-1]]  # last positive = boundary
         return front
-    
+
     # helper: last positive row (boundary) in every column ---------------------
     def boundary_T(Zcoarse):
         """frontier temperature for each time; NaN if column empty"""
@@ -158,11 +182,11 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
             if pos.size:
                 out[i] = temps[pos[-1]]
         return out
-    
-    EPS  = 1e-3      # everything below this is considered “zero”
-    SIG  = 1.5       # Gaussian sigma in *fine* grid cells
-    METHOD = "linear"   # safer than "cubic" for flat regions
-    
+
+    EPS = 1e-3  # everything below this is considered “zero”
+    SIG = 1.5  # Gaussian sigma in *fine* grid cells
+    METHOD = "linear"  # safer than "cubic" for flat regions
+
     # # ── heat‑map loop -----------------------------------------------------------
     # for fname, Z2d, cbar_label, n_levels in heatmap_specs:
 
@@ -204,7 +228,7 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
     #         # 5)  contour levels ---------------------------------------------------
     #         dist_to_front = T_front_fine - Yd     # ≥0 inside, <0 outside
     #         boundary_level = 24
-    #         interior_levels = [14, 19, 24]              
+    #         interior_levels = [14, 19, 24]
     #         if isinstance(n_levels, int):
     #             zmin = np.nanmin(Z_smooth[Z_smooth > EPS])
     #             zmax = np.nanmax(Z_smooth)
@@ -262,13 +286,13 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
 
     for fname, Z2d, cbar_label, n_levels in heatmap_specs:
         if fname == "x_peak_position.pdf":
-            #fname = fname.replace("x_peak_position", "x_peak_position_no_interp")
+            # fname = fname.replace("x_peak_position", "x_peak_position_no_interp")
             # ── choose grid (no interpolation shown here) ──────────────────────
-            Z_plot             = Z2d
-            X_plot, Y_plot     = np.meshgrid(times, temps)
+            Z_plot = Z2d
+            X_plot, Y_plot = np.meshgrid(times, temps)
 
             # ── build figure WITHOUT constrained_layout ───────────────────────
-            #fig, ax = plt.subplots(figsize=(4.8, 3.8), constrained_layout=True)   # ← no constrained_layout
+            # fig, ax = plt.subplots(figsize=(4.8, 3.8), constrained_layout=True)   # ← no constrained_layout
 
             # ─────────────────────────────────────────────────────────────────────────
             # heat‑map
@@ -285,60 +309,65 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
                 col = Z_plot[:, i]
                 pos = np.where(col > 0)[0]
                 if pos.size:
-                    frontier_idx[i] = pos[-1]          # last positive → boundary
+                    frontier_idx[i] = pos[-1]  # last positive → boundary
 
             # temperature of the boundary for each column
-            T_frontier = temps[frontier_idx]           # shape (len(times),)
+            T_frontier = temps[frontier_idx]  # shape (len(times),)
 
             # broadcast to full 2‑D coarse mesh
-            dist_to_front = T_frontier[None, :] - Y_plot   # ≥0 inside, <0 outside
+            dist_to_front = T_frontier[None, :] - Y_plot  # ≥0 inside, <0 outside
 
             # ─────────────────────────────────────────────────────────────────────────
             # 2) contour levels
             # ------------------------------------------------------------------------
-            boundary_levels  = [EPS, 24]          # thin solid frontier
+            boundary_levels = [EPS, 24]  # thin solid frontier
             interior_levels = [14, 19, 24]  # dotted interior contours
 
             # safety band width (°C): skip cells where 0 < d < Δ
             DELTA = 2.0
 
             # ── layout parameters ---------------------------------------
-            FIG_W = FIG_H = 4.8      # square canvas (hard width cap)
-            LEFT   = 0.08            # left margin
-            RIGHT  = 0.01            # right margin
-            TOP    = 0.10            # white band reserved for annotation
-            BOT    = 0.05            # bottom margin
+            FIG_W = FIG_H = 4.8  # square canvas (hard width cap)
+            LEFT = 0.08  # left margin
+            RIGHT = 0.01  # right margin
+            TOP = 0.10  # white band reserved for annotation
+            BOT = 0.05  # bottom margin
 
-            CB_W   = 0.045           # colour-bar slice
-            CB_PAD = 0.015           # gap between map & bar
+            CB_W = 0.045  # colour-bar slice
+            CB_PAD = 0.015  # gap between map & bar
 
-            sq_w = 1 - LEFT - CB_PAD - CB_W - RIGHT     # square width fraction
-            sq_h = 1 - TOP - BOT                        # square height fraction
-            sq_h = min(sq_h, sq_w)                      # ensure square fits
+            sq_w = 1 - LEFT - CB_PAD - CB_W - RIGHT  # square width fraction
+            sq_h = 1 - TOP - BOT  # square height fraction
+            sq_h = min(sq_h, sq_w)  # ensure square fits
             sq_w = sq_h
 
             fig = plt.figure(figsize=(FIG_W, FIG_H), dpi=DPI)
 
             # square heat-map axes anchored just under the top band
-            ax = fig.add_axes([
-                LEFT,
-                BOT,
-                sq_w,
-                sq_h,
-            ])
+            ax = fig.add_axes(
+                [
+                    LEFT,
+                    BOT,
+                    sq_w,
+                    sq_h,
+                ]
+            )
 
             # colour-bar axes matching the map height
-            cax = fig.add_axes([
-                LEFT + sq_w + CB_PAD,
-                BOT,
-                CB_W,
-                sq_h,
-            ])
+            cax = fig.add_axes(
+                [
+                    LEFT + sq_w + CB_PAD,
+                    BOT,
+                    CB_W,
+                    sq_h,
+                ]
+            )
 
             # ── heat-map and contours -----------------------------------
-            mesh = ax.pcolormesh(X_plot, Y_plot, Z_plot,
-                                 cmap=COLORMAP, shading='gouraud')
-            ax.set_aspect('equal', adjustable='box')
+            mesh = ax.pcolormesh(
+                X_plot, Y_plot, Z_plot, cmap=COLORMAP, shading="gouraud"
+            )
+            ax.set_aspect("equal", adjustable="box")
 
             # cs = ax.contour(X_plot, Y_plot, Z_plot,
             #                 levels=n_levels, colors='w', linewidths=0.8)
@@ -348,16 +377,28 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
             # 3) draw the contours
             # ------------------------------------------------------------------------
             # boundary – draw once, thin solid
-            cs_bound = ax.contour(X_plot, Y_plot, Z_plot,
-                                levels=boundary_levels,
-                                colors='w', linewidths=0.8, linestyles='solid')
+            cs_bound = ax.contour(
+                X_plot,
+                Y_plot,
+                Z_plot,
+                levels=boundary_levels,
+                colors="w",
+                linewidths=0.8,
+                linestyles="solid",
+            )
 
             # interior – mask out the Δ‑band so they start away from the frontier
             if interior_levels:
                 Z_masked = np.where(dist_to_front > DELTA, Z_plot, np.nan)
-                cs_int = ax.contour(X_plot, Y_plot, Z_masked,
-                                    levels=interior_levels,
-                                    colors='w', linewidths=0.8, linestyles='solid')
+                cs_int = ax.contour(
+                    X_plot,
+                    Y_plot,
+                    Z_masked,
+                    levels=interior_levels,
+                    colors="w",
+                    linewidths=0.8,
+                    linestyles="solid",
+                )
                 ax.clabel(cs_int, inline=True, fontsize=7)
 
             # ── colour-bar ----------------------------------------------
@@ -366,87 +407,96 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
             # place label on the *outside* of the bar
             cbar.set_label(
                 cbar_label,
-                rotation=90,   # downward reading
-                labelpad=25,    # push rightwards
-                va='bottom', ha='center',
-                fontsize=12
+                rotation=90,  # downward reading
+                labelpad=25,  # push rightwards
+                va="bottom",
+                ha="center",
+                fontsize=12,
             )
 
             # ── recipe marker -------------------------------------------
-            ax.scatter(time, temp, s=20,
-                       facecolor='firebrick', lw=1.3, zorder=4)
+            ax.scatter(time, temp, s=20, facecolor="firebrick", lw=1.3, zorder=4)
 
             # ── annotation in the dedicated top band --------------------
             # height of white band above the square map
-            pad_top = 1 - (BOT + sq_h)               #  = unused top fraction
+            pad_top = 1 - (BOT + sq_h)  #  = unused top fraction
 
-            HEAD_Y  = BOT + sq_h + pad_top/2 + 0.02        # vertical centre of that band
+            HEAD_Y = BOT + sq_h + pad_top / 2 + 0.02  # vertical centre of that band
 
             ax.annotate(
-                rf'{time:.1f} h, {temp:.0f} °C',
-                xy=(time + 0.5, temp + 1.5),  xycoords='data',   # arrow head
-                xytext=(0.5, HEAD_Y),         textcoords='figure fraction',
-                ha='center', va='center', fontsize=9,            # now perfectly centred
-                arrowprops=dict(arrowstyle='-', lw=0.8, color='firebrick',
-                                shrinkA=0, shrinkB=0),
-                zorder=5
+                rf"{time:.1f} h, {temp:.0f} °C",
+                xy=(time + 0.5, temp + 1.5),
+                xycoords="data",  # arrow head
+                xytext=(0.5, HEAD_Y),
+                textcoords="figure fraction",
+                ha="center",
+                va="center",
+                fontsize=9,  # now perfectly centred
+                arrowprops=dict(
+                    arrowstyle="-", lw=0.8, color="firebrick", shrinkA=0, shrinkB=0
+                ),
+                zorder=5,
             )
 
             # ── axis labels & save --------------------------------------
-            ax.set_xlabel(r'$t$ (h)')
-            ax.set_ylabel(r'$T$ ($^{\circ}$C)')
+            ax.set_xlabel(r"$t$ (h)")
+            ax.set_ylabel(r"$T$ ($^{\circ}$C)")
 
-            fig.savefig(out_dir / fname, dpi=DPI,
-                        bbox_inches='tight', pad_inches=0.02)
+            fig.savefig(out_dir / fname, dpi=DPI, bbox_inches="tight", pad_inches=0.02)
             plt.close(fig)
-
 
     for fname, Z2d, cbar_label, n_levels in heatmap_specs:
         if fname != "x_peak_position.pdf":
             # ── data grid ------------------------------------------------
-            Z_plot         = Z2d
+            Z_plot = Z2d
             X_plot, Y_plot = np.meshgrid(times, temps)
 
             # ── layout parameters ---------------------------------------
-            FIG_W = FIG_H = 4.8      # square canvas (hard width cap)
-            LEFT   = 0.08            # left margin
-            RIGHT  = 0.01            # right margin
-            TOP    = 0.10            # white band reserved for annotation
-            BOT    = 0.05            # bottom margin
+            FIG_W = FIG_H = 4.8  # square canvas (hard width cap)
+            LEFT = 0.08  # left margin
+            RIGHT = 0.01  # right margin
+            TOP = 0.10  # white band reserved for annotation
+            BOT = 0.05  # bottom margin
 
-            CB_W   = 0.045           # colour-bar slice
-            CB_PAD = 0.015           # gap between map & bar
+            CB_W = 0.045  # colour-bar slice
+            CB_PAD = 0.015  # gap between map & bar
 
-            sq_w = 1 - LEFT - CB_PAD - CB_W - RIGHT     # square width fraction
-            sq_h = 1 - TOP - BOT                        # square height fraction
-            sq_h = min(sq_h, sq_w)                      # ensure square fits
+            sq_w = 1 - LEFT - CB_PAD - CB_W - RIGHT  # square width fraction
+            sq_h = 1 - TOP - BOT  # square height fraction
+            sq_h = min(sq_h, sq_w)  # ensure square fits
             sq_w = sq_h
 
             fig = plt.figure(figsize=(FIG_W, FIG_H), dpi=DPI)
 
             # square heat-map axes anchored just under the top band
-            ax = fig.add_axes([
-                LEFT,
-                BOT,
-                sq_w,
-                sq_h,
-            ])
+            ax = fig.add_axes(
+                [
+                    LEFT,
+                    BOT,
+                    sq_w,
+                    sq_h,
+                ]
+            )
 
             # colour-bar axes matching the map height
-            cax = fig.add_axes([
-                LEFT + sq_w + CB_PAD,
-                BOT,
-                CB_W,
-                sq_h,
-            ])
+            cax = fig.add_axes(
+                [
+                    LEFT + sq_w + CB_PAD,
+                    BOT,
+                    CB_W,
+                    sq_h,
+                ]
+            )
 
             # ── heat-map and contours -----------------------------------
-            mesh = ax.pcolormesh(X_plot, Y_plot, Z_plot,
-                                 cmap=COLORMAP, shading='gouraud')
-            ax.set_aspect('equal', adjustable='box')
+            mesh = ax.pcolormesh(
+                X_plot, Y_plot, Z_plot, cmap=COLORMAP, shading="gouraud"
+            )
+            ax.set_aspect("equal", adjustable="box")
 
-            cs = ax.contour(X_plot, Y_plot, Z_plot,
-                            levels=n_levels, colors='w', linewidths=0.8)
+            cs = ax.contour(
+                X_plot, Y_plot, Z_plot, levels=n_levels, colors="w", linewidths=0.8
+            )
             ax.clabel(cs, inline=True, fontsize=7)
 
             # ── colour-bar ----------------------------------------------
@@ -455,55 +505,55 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
             # place label on the *outside* of the bar
             cbar.set_label(
                 cbar_label,
-                rotation=90,   # downward reading
-                labelpad=33,    # push rightwards
-                va='bottom', ha='center',
-                fontsize=12
+                rotation=90,  # downward reading
+                labelpad=33,  # push rightwards
+                va="bottom",
+                ha="center",
+                fontsize=12,
             )
 
             # ── recipe marker -------------------------------------------
-            ax.scatter(time, temp, s=20,
-                       facecolor='firebrick', lw=1.3, zorder=4)
+            ax.scatter(time, temp, s=20, facecolor="firebrick", lw=1.3, zorder=4)
 
             # ── annotation in the dedicated top band --------------------
             # height of white band above the square map
-            pad_top = 1 - (BOT + sq_h)               #  = unused top fraction
+            pad_top = 1 - (BOT + sq_h)  #  = unused top fraction
 
-            HEAD_Y  = BOT + sq_h + pad_top/2 + 0.02        # vertical centre of that band
+            HEAD_Y = BOT + sq_h + pad_top / 2 + 0.02  # vertical centre of that band
 
             ax.annotate(
-                rf'{time:.1f} h, {temp:.0f} °C',
-                xy=(time + 0.5, temp + 1.5),  xycoords='data',   # arrow head
-                xytext=(0.5, HEAD_Y),         textcoords='figure fraction',
-                ha='center', va='center', fontsize=9,            # now perfectly centred
-                arrowprops=dict(arrowstyle='-', lw=0.8, color='firebrick',
-                                shrinkA=0, shrinkB=0),
-                zorder=5
+                rf"{time:.1f} h, {temp:.0f} °C",
+                xy=(time + 0.5, temp + 1.5),
+                xycoords="data",  # arrow head
+                xytext=(0.5, HEAD_Y),
+                textcoords="figure fraction",
+                ha="center",
+                va="center",
+                fontsize=9,  # now perfectly centred
+                arrowprops=dict(
+                    arrowstyle="-", lw=0.8, color="firebrick", shrinkA=0, shrinkB=0
+                ),
+                zorder=5,
             )
 
             # ── axis labels & save --------------------------------------
-            ax.set_xlabel(r'$t$ (h)')
-            ax.set_ylabel(r'$T$ ($^{\circ}$C)')
+            ax.set_xlabel(r"$t$ (h)")
+            ax.set_ylabel(r"$T$ ($^{\circ}$C)")
 
-            fig.savefig(out_dir / fname, dpi=DPI,
-                        bbox_inches='tight', pad_inches=0.02)
+            fig.savefig(out_dir / fname, dpi=DPI, bbox_inches="tight", pad_inches=0.02)
             plt.close(fig)
-
-
-
-
-
 
 
 # ─── running block ------------------------------------------------------
 def main():
     base = Path(BASE_DIR)
-    out  = base / OUTPUT_DIR
+    out = base / OUTPUT_DIR
     out.mkdir(exist_ok=True)
 
     # overview heat‑maps
     plot_overview_heatmaps(base, out, time=8.0, temp=125)
     print(f"Heat‑maps written → {out}")
+
 
 if __name__ == "__main__":
     main()

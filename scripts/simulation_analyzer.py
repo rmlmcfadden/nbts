@@ -16,11 +16,12 @@ import matplotlib.pyplot as plt
 @dataclass
 class Metric:
     """Everything needed to render one heat‑map plot."""
-    z_grid:      np.ndarray
-    cmap:        str
-    levels:      int
-    cbar_label:  str
-    fname:       str
+
+    z_grid: np.ndarray
+    cmap: str
+    levels: int
+    cbar_label: str
+    fname: str
 
 
 class SimulationAnalyzer(ABC):
@@ -29,13 +30,17 @@ class SimulationAnalyzer(ABC):
     """
 
     def __init__(self, base_dir: str, ox_dir: str | None = None) -> None:
-        self.base_dir     = Path(base_dir)
-        self.ox_dir       = Path(ox_dir) if ox_dir else None
-        self.analysis_dir = self.base_dir.parent / f"analysis_{self.ox_dir.name}" if self.ox_dir else self.base_dir.parent / "analysis"
+        self.base_dir = Path(base_dir)
+        self.ox_dir = Path(ox_dir) if ox_dir else None
+        self.analysis_dir = (
+            self.base_dir.parent / f"analysis_{self.ox_dir.name}"
+            if self.ox_dir
+            else self.base_dir.parent / "analysis"
+        )
         self.analysis_dir.mkdir(exist_ok=True)
 
-        self.times:   np.ndarray | None = None
-        self.temps:   np.ndarray | None = None
+        self.times: np.ndarray | None = None
+        self.temps: np.ndarray | None = None
         self.metrics: dict[str, Metric] = {}
 
     # public entry point ---------------------------------------------------
@@ -59,8 +64,9 @@ class SimulationAnalyzer(ABC):
             cbar = fig.colorbar(mesh, ax=ax)
             cbar.set_label(m.cbar_label, fontsize=12)
 
-            cs = ax.contour(X, Y, m.z_grid,
-                            levels=m.levels, colors="white", linewidths=1)
+            cs = ax.contour(
+                X, Y, m.z_grid, levels=m.levels, colors="white", linewidths=1
+            )
             ax.clabel(cs, inline=True, fontsize=8)
 
             ax.set_xlabel("Time (h)", fontsize=14)
@@ -107,28 +113,33 @@ class CurrentDensityAnalyzer(SimulationAnalyzer):
                 continue
 
             df = pd.read_csv(csv, skipinitialspace=True)
-            if not {"x", "current_density_corrected", "J_clean_corr"}.issubset(df.columns):
+            if not {"x", "current_density_corrected", "J_clean_corr"}.issubset(
+                df.columns
+            ):
                 continue
 
             # Metric A
-            J_max     = df["current_density_corrected"].max()
+            J_max = df["current_density_corrected"].max()
             J_surface = self._surface(df, "J_clean_corr")
-            ratio_A   = J_max / J_surface
+            ratio_A = J_max / J_surface
 
             # Metric B
-            x_peak    = df.loc[df["current_density_corrected"].idxmax(), "x"]
+            x_peak = df.loc[df["current_density_corrected"].idxmax(), "x"]
 
             # Metric C
             J_max_surf = self._surface(df, "current_density_corrected")
-            ratio_C    = J_max_surf / J_surface
+            ratio_C = J_max_surf / J_surface
 
-            t_all.append(t_val);   T_all.append(T_val)
-            A_all.append(ratio_A); B_all.append(x_peak); C_all.append(ratio_C)
+            t_all.append(t_val)
+            T_all.append(T_val)
+            A_all.append(ratio_A)
+            B_all.append(x_peak)
+            C_all.append(ratio_C)
 
         # turn lists into 2‑D grids --------------------------------------
         self.times = np.unique(t_all)
         self.temps = np.unique(T_all)
-        shape      = (len(self.temps), len(self.times))
+        shape = (len(self.temps), len(self.times))
         Z_A, Z_B, Z_C = (np.full(shape, np.nan) for _ in range(3))
 
         for t, T, a, b, c in zip(t_all, T_all, A_all, B_all, C_all):
@@ -136,20 +147,26 @@ class CurrentDensityAnalyzer(SimulationAnalyzer):
             j = np.where(self.temps == T)[0][0]
             Z_A[j, i], Z_B[j, i], Z_C[j, i] = a, b, c
 
-        # register the three plots 
+        # register the three plots
         self.metrics = {
             "ratio_A": Metric(
-                Z_A, "cividis", 10,
+                Z_A,
+                "cividis",
+                10,
                 "maximum J(x) / maximum supercurrent in clean Nb",
                 "ratio_max_over_surface.pdf",
             ),
             "x_peak": Metric(
-                Z_B, "cividis", 3,
+                Z_B,
+                "cividis",
+                3,
                 "x position of supercurrent density peak",
                 "x_peak_position.pdf",
             ),
             "ratio_C": Metric(
-                Z_C, "cividis", 10,
+                Z_C,
+                "cividis",
+                10,
                 "J(x) surface value / maximum supercurrent in clean Nb",
                 "surface_current_ratio.pdf",
             ),
@@ -172,28 +189,33 @@ class MultiOxidationCurrentDensityAnalyzer(SimulationAnalyzer):
 
     # ─── helpers (pulled verbatim from CurrentDensityAnalyzer) ───────────
     _parse_time_temp = staticmethod(CurrentDensityAnalyzer._parse_time_temp)
-    _surface         = staticmethod(CurrentDensityAnalyzer._surface)
+    _surface = staticmethod(CurrentDensityAnalyzer._surface)
 
     # ─── construction ───────────────────────────────────────────────────
-    def __init__(self,
-                 parent_dir: str | Path,
-                 n_passes:   int | None = None,   # autodetect if None
-                 step_glob:  str       = "results_reoxidize*") -> None:
+    def __init__(
+        self,
+        parent_dir: str | Path,
+        n_passes: int | None = None,  # autodetect if None
+        step_glob: str = "results_reoxidize*",
+    ) -> None:
 
         self.parent_dir = Path(parent_dir)
         # collect the folders in *chronological* order 1, 2, … ,final
-        step_dirs = sorted(self.parent_dir.glob(step_glob),
-                           key=lambda p: (p.suffix == "", p.name))
+        step_dirs = sorted(
+            self.parent_dir.glob(step_glob), key=lambda p: (p.suffix == "", p.name)
+        )
 
         if not step_dirs:
-            raise FileNotFoundError(f"No oxidization folders matching "
-                                    f"'{step_glob}' found in {parent_dir}")
+            raise FileNotFoundError(
+                f"No oxidization folders matching "
+                f"'{step_glob}' found in {parent_dir}"
+            )
 
         if n_passes is not None:
             step_dirs = step_dirs[:n_passes]
 
-        self.step_dirs   = step_dirs
-        self.n_passes    = len(self.step_dirs)
+        self.step_dirs = step_dirs
+        self.n_passes = len(self.step_dirs)
 
         # the superclass needs *some* base_dir, but we override _collect & _make_plots
         super().__init__(base_dir=str(self.step_dirs[0]))
@@ -201,8 +223,6 @@ class MultiOxidationCurrentDensityAnalyzer(SimulationAnalyzer):
         # one analysis folder for the bundle
         self.analysis_dir = self.parent_dir / f"analysis_multi_step"
         self.analysis_dir.mkdir(exist_ok=True)
-
-
 
     # ─── data collection ────────────────────────────────────────────────
     def _collect(self) -> None:
@@ -221,8 +241,8 @@ class MultiOxidationCurrentDensityAnalyzer(SimulationAnalyzer):
 
         self.times = np.array(sorted(time_set))
         self.temps = np.array(sorted(temp_set))
-        shape2d    = (len(self.temps), len(self.times))
-        shape3d    = (self.n_passes, *shape2d)
+        shape2d = (len(self.temps), len(self.times))
+        shape3d = (self.n_passes, *shape2d)
 
         Z_A = np.full(shape3d, np.nan)
         Z_B = np.full(shape3d, np.nan)
@@ -241,17 +261,19 @@ class MultiOxidationCurrentDensityAnalyzer(SimulationAnalyzer):
                     continue
 
                 df = pd.read_csv(csv, skipinitialspace=True)
-                if not {"x", "current_density_corrected", "J_clean_corr"}.issubset(df.columns):
+                if not {"x", "current_density_corrected", "J_clean_corr"}.issubset(
+                    df.columns
+                ):
                     continue
 
-                J_max     = df["current_density_corrected"].max()
+                J_max = df["current_density_corrected"].max()
                 J_surface = self._surface(df, "J_clean_corr")
-                ratio_A   = J_max / J_surface
+                ratio_A = J_max / J_surface
 
-                x_peak    = df.loc[df["current_density_corrected"].idxmax(), "x"]
+                x_peak = df.loc[df["current_density_corrected"].idxmax(), "x"]
 
                 J_max_surf = self._surface(df, "current_density_corrected")
-                ratio_C    = J_max_surf / J_surface
+                ratio_C = J_max_surf / J_surface
 
                 i = np.where(self.times == t)[0][0]
                 j = np.where(self.temps == T)[0][0]
@@ -262,7 +284,7 @@ class MultiOxidationCurrentDensityAnalyzer(SimulationAnalyzer):
         # pack everything into self.metrics as lists ---------------------
         self.metrics = {
             "max_current": (Z_A, "maximum J(x) / J_clean"),
-            "x_peak" : (Z_B, "x‑position of J(x) peak"),
+            "x_peak": (Z_B, "x‑position of J(x) peak"),
             "surface_current": (Z_C, "J(surface) / J_clean"),
         }
 
@@ -272,25 +294,39 @@ class MultiOxidationCurrentDensityAnalyzer(SimulationAnalyzer):
 
         for key, (Z_stack, cbar_label) in self.metrics.items():
             fig, axes = plt.subplots(
-                1, self.n_passes, figsize=(4 * self.n_passes, 5),
-                sharex=True, sharey=True,
-                constrained_layout=True
+                1,
+                self.n_passes,
+                figsize=(4 * self.n_passes, 5),
+                sharex=True,
+                sharey=True,
+                constrained_layout=True,
             )
 
             # Wrap single‑axes case so later code can treat it uniformly
-            axes_arr = np.atleast_1d(axes)      # → ndarray of Axes
+            axes_arr = np.atleast_1d(axes)  # → ndarray of Axes
             axes_list = axes_arr.ravel().tolist()
 
             vmin, vmax = np.nanmin(Z_stack), np.nanmax(Z_stack)
 
             for idx, ax in enumerate(axes_arr):
                 mesh = ax.pcolormesh(
-                    X, Y, Z_stack[idx], shading="gouraud",
-                    cmap="cividis", vmin=vmin, vmax=vmax
+                    X,
+                    Y,
+                    Z_stack[idx],
+                    shading="gouraud",
+                    cmap="cividis",
+                    vmin=vmin,
+                    vmax=vmax,
                 )
                 cs = ax.contour(
-                    X, Y, Z_stack[idx], levels=10, colors="white",
-                    linewidths=1, vmin=vmin, vmax=vmax
+                    X,
+                    Y,
+                    Z_stack[idx],
+                    levels=10,
+                    colors="white",
+                    linewidths=1,
+                    vmin=vmin,
+                    vmax=vmax,
                 )
                 ax.clabel(cs, inline=True, fontsize=8)
                 ax.set_title(f"Pass {idx+1}")
@@ -304,4 +340,3 @@ class MultiOxidationCurrentDensityAnalyzer(SimulationAnalyzer):
 
             fig.savefig(self.analysis_dir / f"{key}_multi_pass.pdf")
             plt.close(fig)
-

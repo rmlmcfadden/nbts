@@ -5,34 +5,35 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # ─── USER CONFIG ────────────────────────────────────────────────────────────────
-BASE_DIR    = "experiments/ramp_rate_comparison"
-PLOTS_DIR   = "experiments/ramp_rate_plots"
+BASE_DIR = "experiments/ramp_rate_comparison"
+PLOTS_DIR = "experiments/ramp_rate_plots"
 os.makedirs(PLOTS_DIR, exist_ok=True)
 
-RAMP_RATES  = [1, 2, 5, 10]      # °C/min for full grids
-COMP_RAMPS  = [2, 5, 10]         # °C/min for 1×3 comparison plots
-CONST_FILE  = "oxygen_profile_const.csv"
+RAMP_RATES = [1, 2, 5, 10]  # °C/min for full grids
+COMP_RAMPS = [2, 5, 10]  # °C/min for 1×3 comparison plots
+CONST_FILE = "oxygen_profile_const.csv"
 
-OUT_MAX_PDF   = os.path.join(PLOTS_DIR, "max_diff_heatmaps.pdf")
-OUT_DEP_PDF   = os.path.join(PLOTS_DIR, "depth_at_max_heatmaps.pdf")
-OUT_CMP_PDF   = os.path.join(PLOTS_DIR, "max_diff_vs_1C.pdf")
+OUT_MAX_PDF = os.path.join(PLOTS_DIR, "max_diff_heatmaps.pdf")
+OUT_DEP_PDF = os.path.join(PLOTS_DIR, "depth_at_max_heatmaps.pdf")
+OUT_CMP_PDF = os.path.join(PLOTS_DIR, "max_diff_vs_1C.pdf")
 OUT_PCT_CONST = os.path.join(PLOTS_DIR, "pct_vs_constant.pdf")
-OUT_PCT_1C    = os.path.join(PLOTS_DIR, "pct_vs_1C.pdf")
+OUT_PCT_1C = os.path.join(PLOTS_DIR, "pct_vs_1C.pdf")
 OUT_COMBINED_REL = os.path.join(PLOTS_DIR, "combined_rate_comparison.pdf")
 OUT_COMBINED_CONST = os.path.join(PLOTS_DIR, "combined_rate_comparison_const.pdf")
 # ────────────────────────────────────────────────────────────────────────────────
 
 # 1) discover all simulation subfolders named like "100C_6h"
 all_dirs = [
-    d for d in glob.glob(os.path.join(BASE_DIR, "*"))
+    d
+    for d in glob.glob(os.path.join(BASE_DIR, "*"))
     if os.path.isdir(d) and d.endswith("h") and "C_" in os.path.basename(d)
 ]
 
 # 2) parse out unique bake temps and hold times
 temps, hours = [], []
 for d in all_dirs:
-    base = os.path.basename(d)[:-1]    # strip trailing 'h'
-    t_s, h_s = base.split("C_")        # split "120C_42" → ["120","42"]
+    base = os.path.basename(d)[:-1]  # strip trailing 'h'
+    t_s, h_s = base.split("C_")  # split "120C_42" → ["120","42"]
     try:
         temps.append(float(t_s))
         hours.append(float(h_s))
@@ -44,13 +45,13 @@ unique_hours = sorted(set(hours))
 
 # 3) prepare storage for metrics
 nT, nH = len(unique_temps), len(unique_hours)
-Z_max       = {r: np.full((nT, nH), np.nan) for r in RAMP_RATES}
-Z_dep       = {r: np.full((nT, nH), np.nan) for r in RAMP_RATES}
+Z_max = {r: np.full((nT, nH), np.nan) for r in RAMP_RATES}
+Z_dep = {r: np.full((nT, nH), np.nan) for r in RAMP_RATES}
 Z_pct_const = {r: np.full((nT, nH), np.nan) for r in RAMP_RATES}
-Z_pct      = {r: np.full((nT, nH), np.nan) for r in COMP_RAMPS}
-Z_cmp       = {r: np.full((nT, nH), np.nan) for r in COMP_RAMPS}
-Z_r_max     = np.full((nT, nH), np.nan)       # peak of the ramp profile
-Z_const_max = np.full((nT, nH), np.nan)       # peak of the constant profile
+Z_pct = {r: np.full((nT, nH), np.nan) for r in COMP_RAMPS}
+Z_cmp = {r: np.full((nT, nH), np.nan) for r in COMP_RAMPS}
+Z_r_max = np.full((nT, nH), np.nan)  # peak of the ramp profile
+Z_const_max = np.full((nT, nH), np.nan)  # peak of the constant profile
 
 # 4) loop through folders, compute absolute metrics
 for d in all_dirs:
@@ -70,8 +71,8 @@ for d in all_dirs:
     if not os.path.exists(const_fp):
         continue
     df0 = pd.read_csv(const_fp)
-    x  = df0["depth_nm"].to_numpy()     # depth grid
-    c0 = df0["U_const"].to_numpy()      # concentration
+    x = df0["depth_nm"].to_numpy()  # depth grid
+    c0 = df0["U_const"].to_numpy()  # concentration
     Z_const_max[i_t, i_h] = c0[0]
 
     # for each ramp rate, compute difference
@@ -79,10 +80,10 @@ for d in all_dirs:
         ramp_fp = os.path.join(d, f"oxygen_profile_{r}C_min.csv")
         if not os.path.exists(ramp_fp):
             continue
-        df  = pd.read_csv(ramp_fp)
-        cr  = df["U_final"].to_numpy()
+        df = pd.read_csv(ramp_fp)
+        cr = df["U_final"].to_numpy()
         diff = np.abs(cr - c0)
-        idx  = np.nanargmax(diff)
+        idx = np.nanargmax(diff)
 
         Z_max[r][i_t, i_h] = diff[idx]
         Z_dep[r][i_t, i_h] = x[idx]
@@ -137,8 +138,8 @@ print(f"Wrote {OUT_DEP_PDF}")
 fig3, axes3 = plt.subplots(1, 3, figsize=(15, 4), sharex=True, sharey=True)
 axes3 = axes3.flatten()
 for ax, r in zip(axes3, COMP_RAMPS):
-    #Z_cmp = np.abs(Z_max[r] - Z_max[1])
-    pcm   = ax.pcolormesh(H, T, Z_cmp[r], cmap="cividis", shading="gouraud")
+    # Z_cmp = np.abs(Z_max[r] - Z_max[1])
+    pcm = ax.pcolormesh(H, T, Z_cmp[r], cmap="cividis", shading="gouraud")
     fig3.colorbar(pcm, ax=ax, label=f"Δ(max|ΔC|) [{r}–1]")
     cs = ax.contour(H, T, Z_cmp[r], levels=8, colors="white", linewidths=1)
     ax.clabel(cs, inline=True, fmt="%.2e", fontsize=8)
@@ -173,7 +174,7 @@ print(f"Wrote {OUT_PCT_CONST}")
 fig5, axes5 = plt.subplots(1, 3, figsize=(15, 4), sharex=True, sharey=True)
 axes5 = axes5.flatten()
 for ax, r in zip(axes5, COMP_RAMPS):
-    pcm     = ax.pcolormesh(H, T, Z_pct[r], cmap="cividis", shading="gouraud")
+    pcm = ax.pcolormesh(H, T, Z_pct[r], cmap="cividis", shading="gouraud")
     fig5.colorbar(pcm, ax=ax, label=f"% max|ΔC| [{r} / 1]")
     cs = ax.contour(H, T, Z_pct[r], levels=8, colors="white", linewidths=1)
     ax.clabel(cs, inline=True, fmt="%.1f%%", fontsize=8)
@@ -202,9 +203,8 @@ for idx, r in enumerate(RAMP_RATES):
     ax.set_xlabel("Hold time (h)")
     ax.set_ylabel("Bake temp (°C)")
 
-
     # Row 1: percent (ratio) max|ΔC|
-    ax = axes[idx+4]
+    ax = axes[idx + 4]
     pcm = ax.pcolormesh(H, T, Z_pct_const[r], cmap="cividis", shading="gouraud")
     fig6.colorbar(pcm, ax=ax, label="% max|ΔC| / max C_const")
     cs = ax.contour(H, T, Z_pct_const[r], levels=8, colors="white", linewidths=1)
@@ -214,11 +214,9 @@ for idx, r in enumerate(RAMP_RATES):
     ax.set_ylabel("Bake temp (°C)")
 
 fig6.suptitle("Ramp‐rate comparisons against constant profile", y=0.95, fontsize=16)
-fig6.tight_layout(rect=[0,0,1,0.94])
+fig6.tight_layout(rect=[0, 0, 1, 0.94])
 fig6.savefig(OUT_COMBINED_CONST, dpi=300)
 print(f"Wrote {OUT_COMBINED_CONST}")
-
-
 
 
 # ─── Combined Plot (2×3) ────────────────────────────────────────────────────────
@@ -237,7 +235,7 @@ for idx, r in enumerate(COMP_RAMPS):
     ax.set_ylabel("Bake temp (°C)")
 
     # Row 1: percent (ratio) max|ΔC|
-    ax = axes[idx+3]
+    ax = axes[idx + 3]
     pcm = ax.pcolormesh(H, T, Z_pct[r], cmap="cividis", shading="gouraud")
     fig7.colorbar(pcm, ax=ax, label=f"% max|ΔC| [{r}/1]")
     cs = ax.contour(H, T, Z_pct[r], levels=8, colors="white", linewidths=1)
@@ -247,7 +245,6 @@ for idx, r in enumerate(COMP_RAMPS):
     ax.set_ylabel("Bake temp (°C)")
 
 fig7.suptitle("Ramp‐rate comparisons against 1 °C/min", y=0.95, fontsize=16)
-fig7.tight_layout(rect=[0,0,1,0.94])
+fig7.tight_layout(rect=[0, 0, 1, 0.94])
 fig7.savefig(OUT_COMBINED_REL, dpi=300)
 print(f"Wrote {OUT_COMBINED_REL}")
-

@@ -28,21 +28,20 @@ Steps
 from pathlib import Path
 import numpy as np
 import pandas as pd
-import scipy.ndimage as ndi                  # ← NEW
+import scipy.ndimage as ndi  # ← NEW
 from scripts.simulation_analyzer import MultiOxidationCurrentDensityAnalyzer
 
 # ─── CONFIG SECTION ──────────────────────────────────────────────────────
 PARENT_DIR = "experiments/2025-05-24_const_e10b3cd"
-STEP_GLOB  = "results"     # matches _1, _2, _d, …
-N_PASSES   = None          # auto-detect everything present
-TOP_K      = 5             # how many best combos to list (per pass)
+STEP_GLOB = "results"  # matches _1, _2, _d, …
+N_PASSES = None  # auto-detect everything present
+TOP_K = 5  # how many best combos to list (per pass)
 
 # robustness parameters (physical units)
-DTOL_H     = 0.10          # ± hours tolerance band
-TTOL_C     = 3.0           # ± °C   tolerance band
-AGG_FN     = np.mean       # use np.max for worst-case, np.mean for average
+DTOL_H = 0.10  # ± hours tolerance band
+TTOL_C = 3.0  # ± °C   tolerance band
+AGG_FN = np.mean  # use np.max for worst-case, np.mean for average
 # ─────────────────────────────────────────────────────────────────────────
-
 
 
 # ─── helpers ─────────────────────────────────────────────────────────────
@@ -69,15 +68,15 @@ def main() -> None:
     data_dir = analyzer.analysis_dir / "data"
     data_dir.mkdir(exist_ok=True)
 
-    Z_max, _   = analyzer.metrics["max_current"]
-    Z_surf, _  = analyzer.metrics["surface_current"]
+    Z_max, _ = analyzer.metrics["max_current"]
+    Z_surf, _ = analyzer.metrics["surface_current"]
     Z_xpeak, _ = analyzer.metrics["x_peak"]
 
     times, temps = analyzer.times, analyzer.temps
-    n_pass       = analyzer.n_passes
+    n_pass = analyzer.n_passes
 
     # ── convert physical tolerances to grid-radius (indices) ────────────
-    dt_per_cell = np.diff(times).mean()   # assumes quasi-uniform grid
+    dt_per_cell = np.diff(times).mean()  # assumes quasi-uniform grid
     dT_per_cell = np.diff(temps).mean()
 
     rad_t = max(1, int(round(DTOL_H / dt_per_cell)))
@@ -90,26 +89,27 @@ def main() -> None:
 
     # ─── iterate over passes ────────────────────────────────────────────
     for p_idx in range(n_pass):
-        z_max  = Z_max[p_idx]
+        z_max = Z_max[p_idx]
         z_surf = Z_surf[p_idx]
-        z_x    = Z_xpeak[p_idx]
+        z_x = Z_xpeak[p_idx]
 
-        n_max  = normalise(z_max,  minimise=True)
+        n_max = normalise(z_max, minimise=True)
         n_surf = normalise(z_surf, minimise=True)
-        n_x    = normalise(z_x,    minimise=False)
+        n_x = normalise(z_x, minimise=False)
 
-        dist = np.sqrt(n_max**2 + n_surf**2 + (1.0 - n_x)**2)
+        dist = np.sqrt(n_max**2 + n_surf**2 + (1.0 - n_x) ** 2)
 
         # ── robust score: aggregate distance in neighbourhood ───────────
-        robust = ndi.generic_filter(dist, AGG_FN, footprint=footprint,
-                                    mode='nearest')
+        robust = ndi.generic_filter(dist, AGG_FN, footprint=footprint, mode="nearest")
 
-        flat  = robust.flatten()
+        flat = robust.flatten()
         valid = ~np.isnan(flat)
         order = np.argsort(flat[valid])
 
-        header = (f"\nPass {p_idx+1} — top {TOP_K} robust recipes "
-                  f"(Δt±{DTOL_H} h, ΔT±{TTOL_C} °C):")
+        header = (
+            f"\nPass {p_idx+1} — top {TOP_K} robust recipes "
+            f"(Δt±{DTOL_H} h, ΔT±{TTOL_C} °C):"
+        )
         print(header)
         summary_lines.append(header)
 
@@ -121,15 +121,17 @@ def main() -> None:
 
         for rank, flat_idx in enumerate(np.flatnonzero(valid)[order[:TOP_K]], 1):
             j, i = np.unravel_index(flat_idx, robust.shape)
-            r    = robust[j, i]
+            r = robust[j, i]
             t_val, T_val = times[i], temps[j]
-            line = (f"  {rank:>2}:  time = {t_val:6.2f} h, "
-                    f"temp = {T_val:6.1f} °C   →  robust = {r:7.4f}")
+            line = (
+                f"  {rank:>2}:  time = {t_val:6.2f} h, "
+                f"temp = {T_val:6.1f} °C   →  robust = {r:7.4f}"
+            )
             print(line)
             summary_lines.append(line)
 
             if r < global_best[0]:
-                global_best = (r, p_idx+1, t_val, T_val)
+                global_best = (r, p_idx + 1, t_val, T_val)
 
         # save full robust matrix
         df = pd.DataFrame(
