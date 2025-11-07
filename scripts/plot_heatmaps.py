@@ -9,16 +9,16 @@ Custom plotting for paper figures
 """
 
 # ─── CONFIG SECTION ─────────────────────────────────────────────────────
-BASE_DIR = "experiments/2025-06-04_const_3c448e2"  # path to the main experiment folder
+BASE_DIR = "experiments/2025-11-05_const_605b3b7"  # path to the main experiment folder
 RESULTS_DIR = "results"  # subfolder inside BASE_DIR
 OUTPUT_DIR = "figures"  # created inside BASE_DIR/..
 COLORMAP = "cividis"  # change freely
-LEVELS_A = 5  # contour levels for each heat‑map
-LEVELS_B = 1
-LEVELS_C = 6
-LEVELS_D = 6
-LEVELS_E = 6
-DPI = 400  # PDF/PNG output resolution
+LEVELS_TILDE_J = 6  # contour levels for each heat‑map
+LEVELS_TILDE_X = 6
+LEVELS_TILDE_J_0 = 6
+LEVELS_INTEGRAL_j = 6
+LEVELS_J_DIFF = 6
+DPI = None  # PDF/PNG output resolution
 # ────────────────────────────────────────────────────────────────────────
 
 from pathlib import Path
@@ -90,7 +90,9 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
         ratioA = J_max / J_surf_clean
         ratioC = J_surf_smooth / J_surf_clean
         ratioD = J / J_c
-        ratioD_integral = np.trapz(ratioD, x=x)  # integral of J / J_c
+        ratioD_integral = np.trapezoid(
+            ratioD, x=x, dx=np.diff(x)[0]
+        )  # integral of J / J_c
         ratioE = (J_surf_clean / J_c.max()) - (J_surf_smooth / J_c.min())
 
         t_vals.append(t)
@@ -118,32 +120,37 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
         (
             "ratio_max_over_surface.pdf",
             A,
-            r"$\tilde{J}\,\equiv\; \frac{\max\{J(x)\}}{\max\{J_{\mathrm{clean}}(x)\}}$",
-            LEVELS_A,
+            # r"$\tilde{J} \equiv \max \{ J_\mathrm{baked}(x) \} \, / \, \max \{ J_\mathrm{clean}(x) \}$",
+            r"$\tilde{J} \equiv \max \{ J(x) \} \, / \, \max \{ J_\mathrm{clean}(x) \}$",
+            LEVELS_TILDE_J,
         ),
         (
             "x_peak_position.pdf",
             B,
-            r"$\tilde{x}\;\equiv\;\operatorname{arg\,max}_{x}\,\{J(x)\}$",
-            LEVELS_B,
+            # r"$\tilde{x} \equiv \operatorname{arg\,max}_{x} \{ J_\mathrm{baked}(x) \}$",
+            r"$\tilde{x} \equiv \operatorname{arg\,max}_{x} \{ J(x) \}$",
+            LEVELS_TILDE_X,
         ),
         (
             "surface_current_ratio.pdf",
             C,
-            r"$\tilde{J}_0 \;\equiv\; \dfrac{J(x=0)}{\max\{J_{\mathrm{clean}}(x)\}}$",
-            LEVELS_C,
+            # r"$\tilde{J}_0 \equiv J_\mathrm{baked}(x=0) \, / , \max J_\mathrm{clean}(x)$",
+            r"$\tilde{J}_0 \equiv J(x=0) \, / \, \max \{ J_\mathrm{clean}(x) \}$",
+            LEVELS_TILDE_J_0,
         ),
         (
             "integral_current_ratio.pdf",
             D,
+            # r"$\int_{0}^{\infty} j_\mathrm{baked}(x) \, \mathrm{d}x$",
             r"$\int_{0}^{\infty} j(x) \, \mathrm{d}x$",
-            LEVELS_D,
+            LEVELS_INTEGRAL_j,
         ),
         (
             "surface_current_difference.pdf",
             E,
-            r"$j_{diff} \;\equiv\; j(x=0) - j_{clean}(x=0)$",
-            LEVELS_E,
+            # r"$j_\mathrm{diff} \equiv j_\mathrm{baked}(x=0) - j_\mathrm{clean}(x=0)$",
+            r"$j_\mathrm{diff} \equiv j(x=0) - j_\mathrm{clean}(x=0)$",
+            LEVELS_J_DIFF,
         ),
     ]
 
@@ -267,13 +274,13 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
     #         x_lab = 0.25
     #         y_lab = 0.5 * (ax.get_position().y1 + 3)
 
-    #         ax.scatter(time, temp, s=20, facecolor='firebrick', lw=1.3, zorder=4)
+    #         ax.scatter(time, temp, s=20, facecolor='red', lw=1.3, zorder=4)
     #         ax.annotate(
     #             rf'{time:.1f} h, {temp:.0f} °C',
     #             xy=(time + 0.5, temp + 1.5), xycoords='data',
     #             xytext=(x_lab, y_lab), textcoords='figure fraction',
     #             ha='center', va='center', fontsize=8,
-    #             arrowprops=dict(arrowstyle='-', lw=0.8, color='firebrick',
+    #             arrowprops=dict(arrowstyle='-', lw=0.8, color='red',
     #                             shrinkA=0, shrinkB=0),
     #             zorder=5
     #         )
@@ -341,6 +348,7 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
             sq_h = min(sq_h, sq_w)  # ensure square fits
             sq_w = sq_h
 
+            """
             fig = plt.figure(figsize=(FIG_W, FIG_H), dpi=DPI)
 
             # square heat-map axes anchored just under the top band
@@ -362,12 +370,20 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
                     sq_h,
                 ]
             )
+            """
+
+            fig, ax = plt.subplots(
+                1,
+                1,
+                figsize=(FIG_W, FIG_H),
+                constrained_layout=True,
+            )
 
             # ── heat-map and contours -----------------------------------
             mesh = ax.pcolormesh(
                 X_plot, Y_plot, Z_plot, cmap=COLORMAP, shading="gouraud"
             )
-            ax.set_aspect("equal", adjustable="box")
+            # ax.set_aspect("equal", adjustable="box")
 
             # cs = ax.contour(X_plot, Y_plot, Z_plot,
             #                 levels=n_levels, colors='w', linewidths=0.8)
@@ -402,7 +418,8 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
                 ax.clabel(cs_int, inline=True, fontsize=7)
 
             # ── colour-bar ----------------------------------------------
-            cbar = fig.colorbar(mesh, cax=cax)
+            # cbar = fig.colorbar(mesh, cax=cax)
+            cbar = fig.colorbar(mesh, ax=ax)
 
             # place label on the *outside* of the bar
             cbar.set_label(
@@ -415,25 +432,30 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
             )
 
             # ── recipe marker -------------------------------------------
-            ax.scatter(time, temp, s=20, facecolor="firebrick", lw=1.3, zorder=4)
+            ax.scatter(time, temp, s=20, facecolor="red", lw=1.3, zorder=4)
 
             # ── annotation in the dedicated top band --------------------
             # height of white band above the square map
             pad_top = 1 - (BOT + sq_h)  #  = unused top fraction
 
-            HEAD_Y = BOT + sq_h + pad_top / 2 + 0.02  # vertical centre of that band
+            # HEAD_Y = BOT + sq_h + pad_top / 2 + 0.02  # vertical centre of that band
+            HEAD_Y = 1.05
 
             ax.annotate(
-                rf"{time:.1f} h, {temp:.0f} °C",
+                # rf"{time:.1f} h, {temp:.0f} °C",
+                rf"$t = {time:.1f}$ h, $T = {temp:.0f}$ °C",
                 xy=(time + 0.5, temp + 1.5),
                 xycoords="data",  # arrow head
                 xytext=(0.5, HEAD_Y),
-                textcoords="figure fraction",
+                # textcoords="figure fraction",
+                textcoords="axes fraction",
                 ha="center",
                 va="center",
-                fontsize=9,  # now perfectly centred
+                # fontsize=9,  # now perfectly centred
+                fontsize="small",
+                color="red",
                 arrowprops=dict(
-                    arrowstyle="-", lw=0.8, color="firebrick", shrinkA=0, shrinkB=0
+                    arrowstyle="-", lw=0.8, color="red", shrinkA=0, shrinkB=0
                 ),
                 zorder=5,
             )
@@ -442,7 +464,12 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
             ax.set_xlabel(r"$t$ (h)")
             ax.set_ylabel(r"$T$ ($^{\circ}$C)")
 
-            fig.savefig(out_dir / fname, dpi=DPI, bbox_inches="tight", pad_inches=0.02)
+            fig.savefig(
+                out_dir / fname,
+                dpi=DPI,
+                # bbox_inches="tight",
+                # pad_inches=0.02,
+            )
             plt.close(fig)
 
     for fname, Z2d, cbar_label, n_levels in heatmap_specs:
@@ -466,6 +493,7 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
             sq_h = min(sq_h, sq_w)  # ensure square fits
             sq_w = sq_h
 
+            """
             fig = plt.figure(figsize=(FIG_W, FIG_H), dpi=DPI)
 
             # square heat-map axes anchored just under the top band
@@ -487,12 +515,20 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
                     sq_h,
                 ]
             )
+            """
+
+            fig, ax = plt.subplots(
+                1,
+                1,
+                figsize=(FIG_W, FIG_H),
+                constrained_layout=True,
+            )
 
             # ── heat-map and contours -----------------------------------
             mesh = ax.pcolormesh(
                 X_plot, Y_plot, Z_plot, cmap=COLORMAP, shading="gouraud"
             )
-            ax.set_aspect("equal", adjustable="box")
+            # ax.set_aspect("equal", adjustable="box")
 
             cs = ax.contour(
                 X_plot, Y_plot, Z_plot, levels=n_levels, colors="w", linewidths=0.8
@@ -500,7 +536,8 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
             ax.clabel(cs, inline=True, fontsize=7)
 
             # ── colour-bar ----------------------------------------------
-            cbar = fig.colorbar(mesh, cax=cax)
+            # cbar = fig.colorbar(mesh, cax=cax)
+            cbar = fig.colorbar(mesh, ax=ax)
 
             # place label on the *outside* of the bar
             cbar.set_label(
@@ -513,25 +550,30 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
             )
 
             # ── recipe marker -------------------------------------------
-            ax.scatter(time, temp, s=20, facecolor="firebrick", lw=1.3, zorder=4)
+            ax.scatter(time, temp, s=20, facecolor="red", lw=1.3, zorder=4)
 
             # ── annotation in the dedicated top band --------------------
             # height of white band above the square map
             pad_top = 1 - (BOT + sq_h)  #  = unused top fraction
 
-            HEAD_Y = BOT + sq_h + pad_top / 2 + 0.02  # vertical centre of that band
+            # HEAD_Y = BOT + sq_h + pad_top / 2 + 0.02  # vertical centre of that band
+            HEAD_Y = 1.05
 
             ax.annotate(
-                rf"{time:.1f} h, {temp:.0f} °C",
+                # rf"{time:.1f} h, {temp:.0f} °C",
+                rf"$t = {time:.1f}$ h, $T = {temp:.0f}$ °C",
                 xy=(time + 0.5, temp + 1.5),
                 xycoords="data",  # arrow head
                 xytext=(0.5, HEAD_Y),
-                textcoords="figure fraction",
+                # textcoords="figure fraction",
+                textcoords="axes fraction",
                 ha="center",
                 va="center",
-                fontsize=9,  # now perfectly centred
+                # fontsize=9,  # now perfectly centred
+                fontsize="small",
+                color="red",
                 arrowprops=dict(
-                    arrowstyle="-", lw=0.8, color="firebrick", shrinkA=0, shrinkB=0
+                    arrowstyle="-", lw=0.8, color="red", shrinkA=0, shrinkB=0
                 ),
                 zorder=5,
             )
@@ -540,7 +582,12 @@ def plot_overview_heatmaps(base_dir: Path, out_dir: Path, time, temp):
             ax.set_xlabel(r"$t$ (h)")
             ax.set_ylabel(r"$T$ ($^{\circ}$C)")
 
-            fig.savefig(out_dir / fname, dpi=DPI, bbox_inches="tight", pad_inches=0.02)
+            fig.savefig(
+                out_dir / fname,
+                dpi=DPI,
+                # bbox_inches="tight",
+                # pad_inches=0.02,
+            )
             plt.close(fig)
 
 

@@ -17,8 +17,8 @@ The governing equation is:
 ∂C(x, t)/∂t = ∂/∂x [ D(T) ∂C(x, t)/∂x ] + q(x, t, T)
 
 Where:
-- `C(x, t)` is the interstitial oxygen concentration  
-- `D(T)` is the temperature-dependent diffusion coefficient  
+- `C(x, t)` is the interstitial oxygen concentration
+- `D(T)` is the temperature-dependent diffusion coefficient
 - `q(x, t, T)` is a source term that models surface oxygen activity (optional)
 
 Discretization is performed using the Crank–Nicolson finite difference method (FDM), which offers second-order accuracy in space and time with good numerical stability.
@@ -39,4 +39,20 @@ These outputs allow analysis of treatment profiles and their impact on SRF cavit
 
 ---
 
+
+## Installation & Operation
+
+```bash
+cd nbts
+pip3 install --user .
+```
+
+
+```bash
+sim -h
+```
+
+```bash
+sim -c sim_config.yml -p const
+```
 

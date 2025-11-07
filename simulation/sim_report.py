@@ -51,7 +51,7 @@ class GenSimReport:
         self.t = t
         self.T = T
         # TODO: fix lambda_0 to be consistent naming with lambda_L
-        self.lambda_0 = 27  # nm: clean-limit penetration depth
+        self.lambda_0 = 29.0  # nm: clean-limit penetration depth
         # placeholders for computed arrays
         self.ell_val = None
         self.lambda_eff_val = None
@@ -396,7 +396,7 @@ class GenSimReport:
         ax.set_xlim(0, 40)
         ax.set_xlabel(r"$x$ (nm)")
         ax.set_title(
-            f"Suppression factor at T={self.T-273.15:.1f}\u00b0C, t={self.t:.1f}h"
+            f"Suppression factor at T={self.T-273.15:.1f}\u00B0C, t={self.t:.1f}h"
         )
         data = {"suppression_factor": self.suppression_factor}
         self.save_report(fig, data, tag="suppression_factor")
@@ -409,8 +409,8 @@ class GenSimReport:
         ax.set_ylim(self.cfg.temp_profile.start_C, self.temps_K.max() - 273.15 + 10)
         ax.set_xlim(0, self.time_h.max() + 1)
         ax.set_title(
-            f"{self.profile} temperature profile at T={self.T-273.15:.1f}\u00b0C, t={self.t:.1f}h,"
-            f" ramp={self.cfg.temp_profile.ramp_rate_C_per_min:.1f}\u00b0C/min"
+            f"{self.profile} temperature profile at T={self.T-273.15:.1f}\u00B0C, t={self.t:.1f}h,"
+            f" ramp={self.cfg.temp_profile.ramp_rate_C_per_min:.1f}\u00B0C/min"
         )
         plt.tight_layout()
         data = {"temperature_profile": self.temps_K}

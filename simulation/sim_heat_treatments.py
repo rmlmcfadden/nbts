@@ -216,7 +216,7 @@ def run_simulation(
     """
 
     times_h = np.arange(
-        cfg.time.start_h, cfg.time.stop_h + cfg.time.step_h, cfg.time.step_h
+        cfg.time.start_h, cfg.time.stop_h + cfg.time.step_h, cfg.time.step_h,
     )
     bake_C_list = np.arange(
         cfg.temperature.start_C,
@@ -256,7 +256,7 @@ def run_simulation(
             ).generate()
 
             print(
-                f"Running {profile} profile @ {bake_C:.0f}°C, hold time: {time_hold:.2f}h, total time: {total_h:.2f}h"
+                f"Running {profile} profile @ {bake_C:.1f}°C, hold time: {time_hold:.2f}h, total time: {total_h:.2f}h"
             )
 
             solver = CNSolver(cfg, temps_K, total_h, civ_model, U_initial=U_initial)
@@ -304,7 +304,7 @@ def run_simulation(
 
             elapsed = time.perf_counter() - tic
             print(
-                f"Done: {profile} profile @ {bake_C:.0f}°C, hold time: {time_hold:.2f}h, total_time={total_h:.2f}h,\n "
+                f"Done: {profile} profile @ {bake_C:.1f}°C, hold time: {time_hold:.2f}h, total_time={total_h:.2f}h,\n "
                 f"Completed in {elapsed:.2f}s, output → {output_dir}"
             )
 

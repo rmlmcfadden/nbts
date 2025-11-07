@@ -49,8 +49,8 @@ def ell(
 
 def lambda_eff(
     ell: float,
-    lambda_L: float = 27.0,
-    xi_0: float = 33,
+    lambda_L: float = 29.0,
+    xi_0: float = 39.0,
 ) -> float:
     r"""Effective magnetic penetration depth.
 

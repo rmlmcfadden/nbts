@@ -8,11 +8,11 @@ Custom plotting for paper figures
 """
 
 # ─── CONFIG SECTION ─────────────────────────────────────────────────────
-BASE_DIR = "experiments/2025-06-04_const_3c448e2"  # path to the main experiment folder
+BASE_DIR = "experiments/2025-11-05_const_605b3b7"  # path to the main experiment folder
 RESULTS_DIR = "results"  # subfolder inside BASE_DIR
 SIM_DIR = "sim_t8.0_T125.0"  # subfolder inside RESULTS_DIR, for single sim plotsxs
 OUTPUT_DIR = "figures"  # created inside BASE_DIR/..
-DPI = 400  # PDF/PNG output resolution
+DPI = None  # PDF/PNG output resolution
 # ────────────────────────────────────────────────────────────────────────
 
 from pathlib import Path
@@ -106,15 +106,47 @@ def _plot_currents(ax, d):
 
     # ── horizontal line at max J_c ────────────────────
     jc_max = d["J_c"].max() * scale
-    ax.axhline(jc_max, linestyle=":", color="black")
+    jc_min = d["J_c"].min() * scale
+    ax.axhline(jc_max, linestyle="--", color="lightgrey", zorder=0)
+    ax.axhline(jc_min, linestyle="--", color="lightgrey", zorder=0)
 
-    ax.plot(d["x"], d["current_density"] * scale, label=r"$J(x)$")
-    ax.plot(d["x"], d["J_dirty"] * scale, ":", label=r"$J_\mathrm{dirty}(x)$")
-    ax.plot(d["x"], d["J_clean"] * scale, ":", label=r"$J_\mathrm{clean}(x)$")
-    ax.plot(d["x"], d["J_c"] * scale, label=r"$J_c(x)$")
+    ax.plot(
+        d["x"],
+        d["current_density"] * scale,
+        label=r"$J(x)$",
+        # label=r"$J_\mathrm{baked}(x)$",
+        zorder=3,
+    )
+    ax.plot(
+        d["x"],
+        d["J_dirty"] * scale,
+        ":",
+        label=r"$J_\mathrm{dirty}(x)$",
+        zorder=1,
+    )
+    ax.plot(
+        d["x"],
+        d["J_clean"] * scale,
+        ":",
+        label=r"$J_\mathrm{clean}(x)$",
+        zorder=1,
+    )
+    ax.plot(
+        d["x"],
+        d["J_c"] * scale,
+        label=r"$J_c(x)$",
+        zorder=2,
+    )
 
     ax.set_ylim(0, None)
-    ax.legend(frameon=False)
+    ax.legend(
+        frameon=True,
+        title="Current densities:",
+        facecolor="white",
+        edgecolor="none",
+        framealpha=1.0,
+    )
+
 
 
 def _plot_critical(ax, d):
@@ -134,29 +166,53 @@ def _plot_current_ratio(ax, d):
     ratio_dirty = d["J_dirty"] / jc_min
     ratio_clean = d["J_clean"] / jc_max
 
-    auc_main = np.trapz(ratio, d["x"])
-    auc_dirty = np.trapz(ratio_dirty, d["x"])
-    auc_clean = np.trapz(ratio_clean, d["x"])
+    ax.axhline(1.0, linestyle="--", color="lightgrey", zorder=0)
 
-    (ln_main,) = ax.plot(d["x"], ratio, label=rf"$J(x)/J_c$  (∫={auc_main:.2f})")
+    auc_main = np.trapezoid(ratio, x=d["x"], dx=np.diff(d["x"])[0])
+    auc_dirty = np.trapezoid(ratio_dirty, x=d["x"], dx=np.diff(d["x"])[0])
+    auc_clean = np.trapezoid(ratio_clean, x=d["x"], dx=np.diff(d["x"])[0])
+
+    (ln_main,) = ax.plot(
+        d["x"],
+        ratio,
+        # label=rf"$J(x)/J_c$  (∫={auc_main:.2f})",
+        # label=r"$j(x) \equiv J(x) \, / \, J_c$",
+        label=r"$j(x)$",
+        # label=r"$j_\mathrm{baked}(x)$",
+        zorder=2,
+    )
     (ln_dirty,) = ax.plot(
         d["x"],
         ratio_dirty,
-        label=rf"$J_\mathrm{{dirty}}(x)/J_c$  (∫={auc_dirty:.2f})",
+        # label=rf"$J_\mathrm{{dirty}}(x)/J_c$  (∫={auc_dirty:.2f})",
+        # label=r"$j_\mathrm{dirty} \equiv J_\mathrm{{dirty}}(x) \, / \, J_c$",
+        label=r"$j_\mathrm{dirty}$",
         linestyle=":",
+        zorder=1,
     )
     (ln_clean,) = ax.plot(
         d["x"],
         ratio_clean,
-        label=rf"$J_\mathrm{{clean}}(x)/J_c$  (∫={auc_clean:.2f})",
+        # label=rf"$J_\mathrm{{clean}}(x)/J_c$  (∫={auc_clean:.2f})",
+        # label=r"$j_{\mathrm{clean}}(x) \equiv J_\mathrm{{clean}}(x) \, / \, J_c$",
+        label=r"$j_{\mathrm{clean}}(x)$",
         linestyle=":",
+        zorder=1,
     )
 
-    ax.set_ylabel(r"$j(x)=\dfrac{J(x)}{J_c(x)}$")
-    ax.set_xlabel(r"$x\;(\mathrm{nm})$")
+    # ax.set_ylabel(r"$j_{i}(x) \equiv \dfrac{J_{i}(x)}{J_c(x)}$")
+    ax.set_ylabel(r"$j_{i}(x) \equiv J_{i}(x) \, / \, J_c(x) $")
+    ax.set_xlabel(r"$x$ (nm)")
     ax.set_ylim(0, None)
 
-    ax.legend(frameon=False, loc="upper right")
+    ax.legend(
+        frameon=True,
+        # loc="upper right",
+        title="Normalized current densities:",
+        framealpha=1.0,
+        facecolor="white",
+        edgecolor="none",
+    )
 
 
 # ------------- example usage -----------------------------
@@ -172,13 +228,19 @@ def plot_current_densities(sim_dir: Path, out_dir: Path, d):
     )
     _plot_currents(axes[0], d)
     _plot_current_ratio(axes[1], d)
-    axes[0].set_ylabel(r"Current Densities ($10^{11}$ A m$^{-2}$)")
+
+    # axes[0].set_ylabel(r"Current Densities ($10^{11}$ A m$^{-2}$)")
+    axes[0].set_ylabel(r"$J_i(x)$ ($10^{11}$ A m$^{-2}$)")
+
     axes[-1].set_xlim(0, 150)
     axes[0].set_ylim(0, 6)
     axes[-1].set_xlabel(r"$x$ (nm)")
     # plt.suptitle(f"T = {d['T']:.1f} °C,  t = {d['t']:.1f} h")
     fname = sim_dir.name + "_current_density.pdf"
-    fig.savefig(out_dir / fname, dpi=DPI)
+    fig.savefig(
+        out_dir / fname,
+        dpi=DPI,
+    )
     plt.close(fig)
 
 
@@ -188,9 +250,11 @@ def _plot_oxygen(ax, d):
     if "o_total" in d:
         ax.plot(d["x"], d["o_total"], label=r"Oxygen Concentration")
         ax.set_xlim(0, 150)
-        ax.set_ylabel(r"[O] at.%")
+        ax.set_ylabel(r"$[\mathrm{O}](x)$ (at. %)")
 
         # ax.legend()
+
+        ax.set_ylim(0, None)
 
 
 def _plot_mfp(ax, d):
@@ -202,7 +266,7 @@ def _plot_mfp(ax, d):
         ax.plot(
             d["x"], np.full(len(d["x"]), d["ell_val"].max()), linestyle=":", zorder=1
         )
-        ax.set_ylabel(r"$\ell$ (nm)")
+        ax.set_ylabel(r"$\ell(x)$ (nm)")
         ax.set_xlim(0, 150)
         ax.set_ylim(0, None)
 
@@ -222,7 +286,7 @@ def _plot_pen_depth(ax, d):
         d["x"], np.full(len(d["x"]), d["lambda_eff_val"].min()), linestyle=":", zorder=1
     )
     ax.set_xlim(0, 150)
-    ax.set_ylabel(r"$\lambda$ (nm)")
+    ax.set_ylabel(r"$\lambda(x)$ (nm)")
     # ax.legend(
     #     loc='upper right',          # anchor = upper‑right corner of the box
     #     bbox_to_anchor=(1, 0.92),   # (x, y) in axes coords → move down to 92 %
@@ -235,7 +299,7 @@ def _plot_screening(ax, d):
         ax.plot(d["x"], d["screening_profile"], label="Magnetic Screening Profile")
         ax.plot(d["x"], d["B_dirty"], linestyle=":", label=r"$B$ dirty", zorder=1)
         ax.plot(d["x"], d["B_clean"], linestyle=":", label=r"$B$ clean", zorder=1)
-        ax.set_ylabel(r"$B(x)$ (G)")
+        ax.set_ylabel(r"$B(x)$ (mT)")
         ax.set_xlim(0, 150)
         ax.set_ylim(0, None)
         # ax.legend()
@@ -255,7 +319,10 @@ def plot_overview_quantities(sim_dir: Path, out_dir: Path, d):
     # fig.suptitle(f"Overview,  T = {d['T']:.1f} °C,  t = {d['t']:.1f} h")
 
     fname = sim_dir.name + "_overview.pdf"
-    fig.savefig(out_dir / fname, dpi=DPI)
+    fig.savefig(
+        out_dir / fname,
+        dpi=DPI,
+    )
     plt.close(fig)
 
 
